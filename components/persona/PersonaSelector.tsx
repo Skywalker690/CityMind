@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  Accessibility,
-  Briefcase,
-  Map,
-  Route,
-  UserRoundCheck
-} from "lucide-react";
+import { Accessibility, Briefcase, Map, Route, UserRoundCheck } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { PERSONAS } from "@/lib/personas";
@@ -34,9 +28,7 @@ export function PersonaSelector({ value, onChange }: PersonaSelectorProps) {
           <h2 id="persona-title" className="text-base font-semibold">
             Persona
           </h2>
-          <p className="text-sm text-muted-foreground">
-            Recommendations adapt when this changes.
-          </p>
+          <p className="text-sm text-muted-foreground">Recommendations adapt when this changes.</p>
         </div>
         <Badge variant="secondary">Context</Badge>
       </div>
@@ -52,9 +44,7 @@ export function PersonaSelector({ value, onChange }: PersonaSelectorProps) {
               aria-pressed={selected}
               className={cn(
                 "rounded-lg border bg-card p-3 text-left transition hover:border-primary/60 hover:shadow-soft",
-                selected
-                  ? "border-primary bg-primary/5 ring-2 ring-primary/20"
-                  : "border-border"
+                selected ? "border-primary bg-primary/5 ring-2 ring-primary/20" : "border-border"
               )}
             >
               <div className="flex items-start gap-3">
@@ -69,9 +59,7 @@ export function PersonaSelector({ value, onChange }: PersonaSelectorProps) {
                   <Icon className="size-4" aria-hidden />
                 </span>
                 <span className="min-w-0">
-                  <span className="block text-sm font-semibold">
-                    {persona.label}
-                  </span>
+                  <span className="block text-sm font-semibold">{persona.label}</span>
                   <span className="mt-1 block text-xs leading-5 text-muted-foreground">
                     {persona.description}
                   </span>

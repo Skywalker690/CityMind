@@ -153,6 +153,10 @@ Inter
 
 System Sans
 
+The application must not depend on runtime Google Fonts downloads during
+production builds. Geist remains the preferred face when available locally or
+through the browser environment, with Inter and system sans-serif fallbacks.
+
 ---
 
 ## Heading

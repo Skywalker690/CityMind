@@ -9,7 +9,15 @@ export const runtime = "nodejs";
 export async function POST(request: Request) {
   try {
     const payload = mapRequestSchema.parse(await request.json());
-    const route = await generateRoute(payload);
+    const destination =
+      payload.destination && "latitude" in payload.destination
+        ? payload.destination
+        : payload.destination?.coordinates;
+    const route = await generateRoute({
+      origin: payload.origin,
+      destination,
+      persona: payload.persona
+    });
 
     return apiSuccess({
       route,

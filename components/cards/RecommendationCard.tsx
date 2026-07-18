@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  ArrowRight,
-  CheckCircle2,
-  Compass,
-  ShieldCheck,
-  Sparkles
-} from "lucide-react";
+import { ArrowRight, CheckCircle2, Compass, ShieldCheck, Sparkles } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -50,12 +44,8 @@ export function RecommendationCard({ recommendation }: RecommendationCardProps) 
               {confidenceLabel(recommendation.confidence)}
             </Badge>
           </div>
-          <p className="mt-3 text-base font-medium leading-6">
-            {recommendation.recommendation}
-          </p>
-          <p className="mt-2 text-sm leading-6 text-muted-foreground">
-            {recommendation.reason}
-          </p>
+          <p className="mt-3 text-base font-medium leading-6">{recommendation.recommendation}</p>
+          <p className="mt-2 text-sm leading-6 text-muted-foreground">{recommendation.reason}</p>
           <div className="mt-4 grid gap-2 sm:grid-cols-2">
             {recommendation.benefits.map((benefit) => (
               <div
@@ -70,9 +60,7 @@ export function RecommendationCard({ recommendation }: RecommendationCardProps) 
           <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t pt-4">
             <p className="text-sm text-muted-foreground">
               Effort:{" "}
-              <span className="font-medium text-foreground">
-                {recommendation.estimatedEffort}
-              </span>
+              <span className="font-medium text-foreground">{recommendation.estimatedEffort}</span>
             </p>
             <Button
               type="button"

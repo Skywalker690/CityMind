@@ -6,8 +6,7 @@ export function getServerConfig() {
     openaiApiKey: getConfigValue("OPENAI_API_KEY"),
     openaiModel: getConfigValue("OPENAI_MODEL") ?? "gpt-4.1-mini",
     mapboxAccessToken: getConfigValue("MAPBOX_ACCESS_TOKEN"),
-    osrmBaseUrl:
-      getConfigValue("OSRM_BASE_URL") ?? "https://router.project-osrm.org"
+    osrmBaseUrl: getConfigValue("OSRM_BASE_URL") ?? "https://router.project-osrm.org"
   };
 }
 
@@ -20,9 +19,7 @@ export function getServerHealth() {
   } as const;
 
   const status =
-    services.ai === "live" &&
-    services.geocoding === "live" &&
-    services.routing === "configured"
+    services.ai === "live" && services.geocoding === "live" && services.routing === "configured"
       ? "healthy"
       : "degraded";
 

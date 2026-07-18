@@ -2,12 +2,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 export type PromptName =
-  | "system"
-  | "vision"
-  | "context"
-  | "persona"
-  | "urban-reasoning"
-  | "formatter";
+  "system" | "vision" | "context" | "persona" | "urban-reasoning" | "formatter";
 
 export async function loadPrompt(name: PromptName) {
   const promptPath = path.join(process.cwd(), "prompts", `${name}.md`);

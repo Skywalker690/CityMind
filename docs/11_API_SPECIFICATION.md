@@ -261,7 +261,8 @@ Generate optimized route.
 {
   "origin": {},
   "destination": {},
-  "persona": {}
+  "destinationQuery": "optional text destination",
+  "persona": "tourist"
 }
 ```
 
@@ -269,9 +270,18 @@ Generate optimized route.
 
 ## Processing
 
-Call OSRM.
+Resolve explicit destination coordinates when supplied.
 
-Optimize route.
+Call OSRM when route coordinates are available.
+
+Normalize every route into the shared route contract with:
+
+* walking travel mode
+* source (`osrm` or `fallback`)
+* routed or estimated status
+* accessibility verification metadata
+* GeoJSON LineString geometry
+* user-facing warnings
 
 Return route metadata.
 

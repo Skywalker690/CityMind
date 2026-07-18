@@ -5,12 +5,8 @@ import { Bot, Send, UserRound } from "lucide-react";
 import { motion } from "framer-motion";
 
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import type { ChatMessage } from "@/types/chat";
@@ -18,8 +14,10 @@ import type { ChatMessage } from "@/types/chat";
 interface ChatPanelProps {
   messages: ChatMessage[];
   suggestedPrompts: string[];
+  destinationQuery: string;
   disabled: boolean;
   loading: boolean;
+  onDestinationChange: (destination: string) => void;
   onSend: (message: string) => void;
   onPromptSelect: (message: string) => void;
 }
@@ -27,8 +25,10 @@ interface ChatPanelProps {
 export function ChatPanel({
   messages,
   suggestedPrompts,
+  destinationQuery,
   disabled,
   loading,
+  onDestinationChange,
   onSend,
   onPromptSelect
 }: ChatPanelProps) {
@@ -62,9 +62,7 @@ export function ChatPanel({
           aria-live="polite"
         >
           {messages.length ? (
-            messages.map((chatMessage) => (
-              <ChatBubble key={chatMessage.id} message={chatMessage} />
-            ))
+            messages.map((chatMessage) => <ChatBubble key={chatMessage.id} message={chatMessage} />)
           ) : (
             <div className="flex h-full min-h-[190px] items-center justify-center text-center text-sm text-muted-foreground">
               Ask a recommendation question after the scene is understood.
@@ -93,6 +91,23 @@ export function ChatPanel({
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-3">
+          <div className="space-y-2">
+            <label htmlFor="destination-query" className="text-sm font-medium text-foreground">
+              Destination context
+            </label>
+            <Input
+              id="destination-query"
+              value={destinationQuery}
+              onChange={(event) => onDestinationChange(event.target.value)}
+              disabled={disabled || messages.length > 0}
+              placeholder="Optional: ferry terminal, station exit, museum..."
+              aria-describedby="destination-query-help"
+            />
+            <p id="destination-query-help" className="text-xs text-muted-foreground">
+              Add a destination before the first recommendation so CityMind can include route-aware
+              guidance.
+            </p>
+          </div>
           <Textarea
             value={message}
             onChange={(event) => setMessage(event.target.value)}
@@ -134,9 +149,7 @@ function ChatBubble({ message }: { message: ChatMessage }) {
       <div
         className={cn(
           "max-w-[82%] rounded-lg px-3 py-2 text-sm leading-6",
-          isUser
-            ? "bg-primary text-primary-foreground"
-            : "border bg-card text-card-foreground"
+          isUser ? "bg-primary text-primary-foreground" : "border bg-card text-card-foreground"
         )}
       >
         {message.content}

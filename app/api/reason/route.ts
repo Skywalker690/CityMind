@@ -24,10 +24,6 @@ export async function POST(request: Request) {
       return validationError(error);
     }
 
-    return apiError(
-      "REASONING_FAILED",
-      "Unable to generate a recommendation right now.",
-      503
-    );
+    return apiError("REASONING_FAILED", "Unable to generate a recommendation right now.", 503);
   }
 }

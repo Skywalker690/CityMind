@@ -26,10 +26,6 @@ export async function POST(request: Request) {
       return validationError(error);
     }
 
-    return apiError(
-      "CHAT_FAILED",
-      "Unable to continue the conversation right now.",
-      503
-    );
+    return apiError("CHAT_FAILED", "Unable to continue the conversation right now.", 503);
   }
 }

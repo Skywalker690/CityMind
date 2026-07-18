@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  BrainCircuit,
-  LocateFixed,
-  MapPinned,
-  Sparkles,
-  WifiOff
-} from "lucide-react";
+import { BrainCircuit, LocateFixed, MapPinned, Sparkles, WifiOff } from "lucide-react";
 import { motion } from "framer-motion";
 
 import { CameraCard } from "@/components/camera/CameraCard";
@@ -34,7 +28,7 @@ export function CityMindApp() {
     if (cityMind.result) {
       void cityMind.sendChatMessage(message);
     } else {
-      void cityMind.submitPrompt(message);
+      void cityMind.submitPrompt(message, cityMind.persona, true, cityMind.lastDestinationQuery);
     }
   };
 
@@ -53,12 +47,10 @@ export function CityMindApp() {
                 Vision-first
               </Badge>
             </div>
-            <h1 className="mt-3 text-3xl font-semibold tracking-normal md:text-4xl">
-              CityMind
-            </h1>
+            <h1 className="mt-3 text-3xl font-semibold tracking-normal md:text-4xl">CityMind</h1>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground md:text-base">
-              Point at an urban scene, choose your context, and get an explained
-              recommendation that adapts to how you move through the city.
+              Point at an urban scene, choose your context, and get an explained recommendation that
+              adapts to how you move through the city.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
@@ -74,9 +66,7 @@ export function CityMindApp() {
               ) : (
                 <LocateFixed aria-hidden />
               )}
-              {cityMind.permissionState === "granted"
-                ? "Location active"
-                : "Use location"}
+              {cityMind.permissionState === "granted" ? "Location active" : "Use location"}
             </Button>
           </div>
         </div>
@@ -84,14 +74,12 @@ export function CityMindApp() {
 
       <div className="mx-auto grid max-w-[1680px] gap-5 px-4 py-5 md:px-6 xl:grid-cols-[340px_minmax(0,1fr)_430px]">
         <aside className="space-y-5 xl:sticky xl:top-5 xl:self-start">
-          <PersonaSelector
-            value={cityMind.persona}
-            onChange={cityMind.selectPersona}
-          />
+          <PersonaSelector value={cityMind.persona} onChange={cityMind.selectPersona} />
           <CameraCard
             imagePreview={cityMind.imagePreview}
             status={cityMind.status}
             onImageSelected={cityMind.selectImage}
+            onConfirm={cityMind.confirmImage}
             onClear={cityMind.clearImage}
           />
         </aside>
@@ -105,15 +93,13 @@ export function CityMindApp() {
           >
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <div>
-                <p className="text-sm font-medium text-primary">
-                  Active context: {persona.label}
-                </p>
+                <p className="text-sm font-medium text-primary">Active context: {persona.label}</p>
                 <h2 className="mt-1 text-2xl font-semibold tracking-normal">
                   Vision -&gt; Context -&gt; Recommendation
                 </h2>
                 <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-                  CityMind combines the selected persona, scene understanding,
-                  prompt intent, and route context before recommending what to do.
+                  CityMind combines the selected persona, scene understanding, prompt intent, and
+                  route context before recommending what to do.
                 </p>
               </div>
               <div className="rounded-lg border bg-background/70 p-3 text-sm">
@@ -128,24 +114,21 @@ export function CityMindApp() {
             </div>
           </motion.div>
 
-          {cityMind.error ? (
-            <ErrorState message={cityMind.error} onRetry={cityMind.retry} />
-          ) : null}
+          {cityMind.error ? <ErrorState message={cityMind.error} onRetry={cityMind.retry} /> : null}
 
           <VisionSummary scene={cityMind.scene} />
           <RecommendationPanel result={cityMind.result} />
         </section>
 
         <aside className="space-y-5 xl:sticky xl:top-5 xl:self-start">
-          <InteractiveMap
-            route={cityMind.result?.route}
-            location={cityMind.location}
-          />
+          <InteractiveMap route={cityMind.result?.route} location={cityMind.location} />
           <ChatPanel
             messages={cityMind.chatMessages}
             suggestedPrompts={cityMind.suggestedPrompts}
+            destinationQuery={cityMind.lastDestinationQuery}
             disabled={!canAsk}
             loading={cityMind.status === "chatting" || cityMind.status === "reasoning"}
+            onDestinationChange={cityMind.setDestinationQuery}
             onSend={handlePrompt}
             onPromptSelect={handlePrompt}
           />

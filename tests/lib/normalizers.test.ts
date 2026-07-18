@@ -1,9 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  normalizeReasoningResult,
-  normalizeVisionScene
-} from "@/lib/normalizers";
+import { normalizeReasoningResult, normalizeVisionScene } from "@/lib/normalizers";
 import {
   createFallbackReasoning,
   createFallbackRoute,

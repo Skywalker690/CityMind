@@ -63,12 +63,13 @@ export async function generateRoute(input: {
     }
 
     const steps =
-      route.legs?.flatMap((leg) =>
-        leg.steps?.map((step) => ({
-          instruction: formatOsrmInstruction(step),
-          distanceMeters: step.distance ?? 0,
-          durationSeconds: step.duration ?? 0
-        })) ?? []
+      route.legs?.flatMap(
+        (leg) =>
+          leg.steps?.map((step) => ({
+            instruction: formatOsrmInstruction(step),
+            distanceMeters: step.distance ?? 0,
+            durationSeconds: step.duration ?? 0
+          })) ?? []
       ) ?? [];
 
     return {
@@ -85,15 +86,37 @@ export async function generateRoute(input: {
       waypoints: [],
       distanceMeters: route.distance,
       durationSeconds: route.duration,
-      accessible:
-        input.persona === "wheelchair" ||
-        input.persona === "elderly" ||
-        input.persona === "luggage",
+      accessible: false,
+      travelMode: "walking",
+      source: "osrm",
+      status: "routed",
+      accessibility: {
+        status: "unverified",
+        verified: false,
+        evidence: [
+          "OSRM provided walkable route geometry and step timing, but not verified accessibility infrastructure."
+        ],
+        warnings:
+          input.persona === "wheelchair" ||
+          input.persona === "elderly" ||
+          input.persona === "luggage"
+            ? [
+                "Confirm elevators, ramps, curb cuts, and temporary closures before committing to this route."
+              ]
+            : []
+      },
       geometry: route.geometry.coordinates.map(([longitude, latitude]) => ({
         latitude,
         longitude
       })),
-      steps
+      geometryGeoJson: {
+        type: "LineString",
+        coordinates: route.geometry.coordinates
+      },
+      steps,
+      warnings: [
+        "Accessibility is not verified by OSRM; use CityMind's recommendation as decision support."
+      ]
     };
   } catch {
     return createFallbackRoute(origin, destination, input.persona);

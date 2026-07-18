@@ -1,13 +1,6 @@
 import type { Metadata, Viewport } from "next";
-import { Geist } from "next/font/google";
 
 import "./globals.css";
-
-const geist = Geist({
-  subsets: ["latin"],
-  variable: "--font-geist-sans",
-  display: "swap"
-});
 
 export const metadata: Metadata = {
   title: "CityMind",
@@ -38,9 +31,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${geist.variable} min-h-screen font-sans`}>
-        {children}
-      </body>
+      <body className="min-h-screen font-sans">{children}</body>
     </html>
   );
 }

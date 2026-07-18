@@ -23,11 +23,7 @@ export async function POST(request: Request) {
     }
 
     if (image.size > MAX_IMAGE_SIZE_BYTES) {
-      return apiError(
-        "IMAGE_TOO_LARGE",
-        "Images must be 5 MB or smaller for the MVP.",
-        400
-      );
+      return apiError("IMAGE_TOO_LARGE", "Images must be 5 MB or smaller for the MVP.", 400);
     }
 
     const location = parseLocation(formData.get("location"));
@@ -36,7 +32,7 @@ export async function POST(request: Request) {
         ? {
             ...createFallbackScene(location),
             warnings: [
-              "SVG uploads are treated as vector demo assets and are not sent to live AI vision. Use a JPEG, PNG, or camera capture for live vision.",
+              "SVG uploads are treated as vector demo assets and are not sent to live AI vision. Use a JPEG, PNG, or camera capture for live vision."
             ]
           }
         : await analyzeImage({

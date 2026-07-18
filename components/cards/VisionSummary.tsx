@@ -20,8 +20,8 @@ export function VisionSummary({ scene }: VisionSummaryProps) {
         </CardHeader>
         <CardContent>
           <div className="rounded-lg border border-dashed p-5 text-sm text-muted-foreground">
-            Capture a scene to let CityMind identify infrastructure, landmarks,
-            accessibility cues, and navigation context.
+            Capture a scene to let CityMind identify infrastructure, landmarks, accessibility cues,
+            and navigation context.
           </div>
         </CardContent>
       </Card>
@@ -75,7 +75,12 @@ export function VisionSummary({ scene }: VisionSummaryProps) {
                   <span className="font-medium">{item.label}</span>
                   <span className="text-muted-foreground">
                     {" "}
-                    / {item.available === null ? "verify" : item.available ? "visible" : "not visible"}
+                    /{" "}
+                    {item.available === null
+                      ? "verify"
+                      : item.available
+                        ? "visible"
+                        : "not visible"}
                   </span>
                 </li>
               ))}

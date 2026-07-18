@@ -1,8 +1,4 @@
-import {
-  DEFAULT_DESTINATION,
-  DEFAULT_LOCATION,
-  DEMO_DESTINATION_LABEL
-} from "@/lib/constants";
+import { DEFAULT_DESTINATION, DEFAULT_LOCATION, DEMO_DESTINATION_LABEL } from "@/lib/constants";
 import { getPersona } from "@/lib/personas";
 import type { Coordinates, RouteSummary } from "@/types/map";
 import type { PersonaId } from "@/types/persona";
@@ -56,9 +52,7 @@ export function createFallbackScene(location?: Coordinates): VisionScene {
       "Prefer marked pedestrian paths over road edges.",
       "Verify elevators or ramps before committing to the route."
     ],
-    warnings: [
-      "This is a fallback scene interpretation because live AI vision is unavailable."
-    ],
+    warnings: ["This is a fallback scene interpretation because live AI vision is unavailable."],
     confidence: 0.58,
     location
   };
@@ -69,8 +63,7 @@ export function createFallbackRoute(
   destination: Coordinates = DEFAULT_DESTINATION,
   persona: PersonaId = "tourist"
 ): RouteSummary {
-  const accessible =
-    persona === "wheelchair" || persona === "elderly" || persona === "luggage";
+  const accessible = persona === "wheelchair" || persona === "elderly" || persona === "luggage";
 
   return {
     origin: {
@@ -96,6 +89,20 @@ export function createFallbackRoute(
     distanceMeters: accessible ? 780 : 620,
     durationSeconds: accessible ? 720 : 540,
     accessible,
+    travelMode: "walking",
+    source: "fallback",
+    status: "estimated",
+    accessibility: {
+      status: accessible ? "unverified" : "unknown",
+      verified: false,
+      evidence: accessible
+        ? [
+            "Fallback route prioritizes a step-free waypoint for this persona.",
+            "No live accessibility data source has verified ramps or elevators."
+          ]
+        : [],
+      warnings: ["Confirm elevators, ramps, and temporary closures before relying on this route."]
+    },
     geometry: [
       origin,
       {
@@ -108,6 +115,21 @@ export function createFallbackRoute(
       },
       destination
     ],
+    geometryGeoJson: {
+      type: "LineString",
+      coordinates: [
+        [origin.longitude, origin.latitude],
+        [
+          (origin.longitude * 2 + destination.longitude) / 3,
+          (origin.latitude * 2 + destination.latitude) / 3
+        ],
+        [
+          (origin.longitude + destination.longitude * 2) / 3,
+          (origin.latitude + destination.latitude * 2) / 3
+        ],
+        [destination.longitude, destination.latitude]
+      ]
+    },
     steps: [
       {
         instruction: accessible
@@ -128,7 +150,8 @@ export function createFallbackRoute(
         distanceMeters: accessible ? 180 : 130,
         durationSeconds: accessible ? 150 : 120
       }
-    ]
+    ],
+    warnings: ["Route is estimated from fallback geometry because live routing is unavailable."]
   };
 }
 
@@ -164,11 +187,7 @@ function recommendationForPersona(persona: PersonaId): Recommendation {
         "Choose the entrance with the shortest covered walk and elevator access, even if it adds a small detour.",
       reason:
         "For an elderly companion, reduced walking, shade, and fewer level changes matter more than the absolute shortest distance.",
-      benefits: [
-        "Reduces fatigue",
-        "Avoids stairs where possible",
-        "Keeps the route simpler"
-      ],
+      benefits: ["Reduces fatigue", "Avoids stairs where possible", "Keeps the route simpler"],
       estimatedEffort: "Low to moderate",
       confidence: 0.72,
       suggestedAction: "Confirm elevator signage before moving deeper into the station."
@@ -184,11 +203,7 @@ function recommendationForPersona(persona: PersonaId): Recommendation {
         "Take the wider station approach and prioritize elevator or escalator access over the shortest stair route.",
       reason:
         "Luggage makes stairs and narrow paths costly, so a slightly longer path with smoother movement is the better decision.",
-      benefits: [
-        "Less carrying effort",
-        "Fewer stairs",
-        "Better movement through crowds"
-      ],
+      benefits: ["Less carrying effort", "Fewer stairs", "Better movement through crowds"],
       estimatedEffort: "Lower carrying effort",
       confidence: 0.76,
       suggestedAction: "Follow signs for elevator, escalator, or accessible entry."
@@ -204,11 +219,7 @@ function recommendationForPersona(persona: PersonaId): Recommendation {
         "Use the most direct signed entrance and avoid unnecessary exploration unless the station looks crowded.",
       reason:
         "A daily commuter benefits most from speed and low decision time when the scene is familiar transit infrastructure.",
-      benefits: [
-        "Faster station entry",
-        "Fewer decisions",
-        "Keeps the route direct"
-      ],
+      benefits: ["Faster station entry", "Fewer decisions", "Keeps the route direct"],
       estimatedEffort: "Fast, moderate walking",
       confidence: 0.74,
       suggestedAction: "Proceed through the nearest signed entrance."
@@ -223,11 +234,7 @@ function recommendationForPersona(persona: PersonaId): Recommendation {
       "Use the main station entrance first, then orient yourself using visible signage before choosing onward transport.",
     reason:
       "For an unfamiliar area, the best first move is to reach the most legible transit point, reduce uncertainty, and then continue with clearer local cues.",
-    benefits: [
-      "Reduces confusion",
-      "Uses recognizable landmarks",
-      "Keeps onward options open"
-    ],
+    benefits: ["Reduces confusion", "Uses recognizable landmarks", "Keeps onward options open"],
     estimatedEffort: "Moderate walking",
     confidence: 0.7,
     suggestedAction: "Move toward the main entrance and ask a follow-up once signage is visible."

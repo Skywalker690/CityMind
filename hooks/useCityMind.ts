@@ -103,25 +103,22 @@ export function useCityMind() {
     [activeLocation]
   );
 
-  const selectImage = useCallback(
-    (file: File) => {
-      setImageFile(file);
-      setStatus("image-ready");
-      setError(null);
-      setRetryAction(null);
-      setScene(null);
-      setResult(null);
-      setChatMessages([]);
-      setImagePreview((current) => {
-        if (current) {
-          URL.revokeObjectURL(current);
-        }
+  const selectImage = useCallback((file: File) => {
+    setImageFile(file);
+    setStatus("image-ready");
+    setError(null);
+    setRetryAction(null);
+    setScene(null);
+    setResult(null);
+    setChatMessages([]);
+    setImagePreview((current) => {
+      if (current) {
+        URL.revokeObjectURL(current);
+      }
 
-        return URL.createObjectURL(file);
-      });
-    },
-    []
-  );
+      return URL.createObjectURL(file);
+    });
+  }, []);
 
   const confirmImage = useCallback(() => {
     if (!imageFile) {
@@ -238,6 +235,10 @@ export function useCityMind() {
     },
     [lastDestinationQuery, lastPrompt, scene, submitPrompt]
   );
+
+  const setDestinationQuery = useCallback((destination: string) => {
+    setLastDestinationQuery(destination);
+  }, []);
 
   const sendChatMessage = useCallback(
     async (message: string, conversationOverride?: ChatMessage[]) => {
@@ -373,7 +374,8 @@ export function useCityMind() {
     submitPrompt,
     sendChatMessage,
     retry,
-    setLastPrompt
+    setLastPrompt,
+    setDestinationQuery
   };
 }
 

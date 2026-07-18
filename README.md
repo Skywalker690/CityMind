@@ -231,6 +231,10 @@ Run the development server:
 pnpm dev
 ```
 
+Builds use the documented Geist/Inter/system sans-serif font stack without
+fetching remote font files at compile time, keeping local and Vercel builds
+independent from Google Fonts availability.
+
 The MVP includes deterministic fallback behavior when OpenAI or OSRM is
 unavailable, so the core demo remains usable locally.
 

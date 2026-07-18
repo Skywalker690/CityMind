@@ -30,18 +30,13 @@ export function RecommendationPanel({ result }: RecommendationPanelProps) {
           <h2 id="recommendation-title" className="text-xl font-semibold">
             Recommendation
           </h2>
-          <p className="text-sm text-muted-foreground">
-            Intent detected: {result.intent}
-          </p>
+          <p className="text-sm text-muted-foreground">Intent detected: {result.intent}</p>
         </div>
         <Badge variant="success">{Math.round(result.confidence * 100)}% overall</Badge>
       </div>
       <div className="space-y-4">
         {result.recommendations.map((recommendation) => (
-          <RecommendationCard
-            key={recommendation.id}
-            recommendation={recommendation}
-          />
+          <RecommendationCard key={recommendation.id} recommendation={recommendation} />
         ))}
       </div>
       <Card>

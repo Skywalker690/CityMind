@@ -5,9 +5,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 export function useCamera() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  const [status, setStatus] = useState<
-    "idle" | "starting" | "ready" | "blocked" | "unsupported"
-  >("idle");
+  const [status, setStatus] = useState<"idle" | "starting" | "ready" | "blocked" | "unsupported">(
+    "idle"
+  );
   const [error, setError] = useState<string | null>(null);
 
   const stopCamera = useCallback(() => {
