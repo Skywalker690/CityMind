@@ -1,4 +1,8 @@
-import type { RouteSummary } from "@/types/map";
+import type {
+  Destination,
+  DestinationResolution,
+  RouteSummary
+} from "@/types/map";
 import type { VisionScene } from "@/types/vision";
 
 export type RecommendationCategory =
@@ -32,6 +36,8 @@ export interface ReasoningResult {
   intent: string;
   reasoning: string;
   recommendations: Recommendation[];
+  destination?: Destination;
+  destinationResolution?: DestinationResolution;
   route?: RouteSummary;
   nearbyPlaces: NearbyPlace[];
   warnings: string[];

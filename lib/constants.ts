@@ -2,6 +2,14 @@ import type { Coordinates } from "@/types/map";
 
 export const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
 
+export const VISION_REQUEST_TIMEOUT_MS = 30_000;
+
+export const REASONING_REQUEST_TIMEOUT_MS = 30_000;
+
+export const CHAT_REQUEST_TIMEOUT_MS = 30_000;
+
+export const MAP_REQUEST_TIMEOUT_MS = 10_000;
+
 export const DEFAULT_LOCATION: Coordinates = {
   latitude: 9.9674,
   longitude: 76.3183

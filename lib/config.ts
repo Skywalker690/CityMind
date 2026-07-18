@@ -5,8 +5,30 @@ export function getServerConfig() {
   return {
     openaiApiKey: getConfigValue("OPENAI_API_KEY"),
     openaiModel: getConfigValue("OPENAI_MODEL") ?? "gpt-4.1-mini",
+    mapboxAccessToken: getConfigValue("MAPBOX_ACCESS_TOKEN"),
     osrmBaseUrl:
       getConfigValue("OSRM_BASE_URL") ?? "https://router.project-osrm.org"
+  };
+}
+
+export function getServerHealth() {
+  const config = getServerConfig();
+  const services = {
+    ai: config.openaiApiKey ? "live" : "fallback",
+    geocoding: config.mapboxAccessToken ? "live" : "unavailable",
+    routing: config.osrmBaseUrl ? "configured" : "unavailable"
+  } as const;
+
+  const status =
+    services.ai === "live" &&
+    services.geocoding === "live" &&
+    services.routing === "configured"
+      ? "healthy"
+      : "degraded";
+
+  return {
+    status,
+    services
   };
 }
 

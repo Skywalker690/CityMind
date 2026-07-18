@@ -21,6 +21,25 @@ type WorkflowStatus =
   | "chatting"
   | "error";
 
+type RetryAction =
+  | {
+      kind: "vision";
+      file: File;
+    }
+  | {
+      kind: "reasoning";
+      prompt: string;
+      persona: PersonaId;
+      addConversation: boolean;
+      destinationQuery?: string;
+    }
+  | {
+      kind: "chat";
+      message: string;
+      conversation: ChatMessage[];
+    }
+  | null;
+
 interface VisionApiData {
   scene: VisionScene;
   visionSummary: {
@@ -39,8 +58,10 @@ export function useCityMind() {
   const [scene, setScene] = useState<VisionScene | null>(null);
   const [result, setResult] = useState<ReasoningResult | null>(null);
   const [lastPrompt, setLastPrompt] = useState<string>(SUGGESTED_PROMPTS[0]);
+  const [lastDestinationQuery, setLastDestinationQuery] = useState("");
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [retryAction, setRetryAction] = useState<RetryAction>(null);
 
   const activeLocation = location ?? DEFAULT_LOCATION;
 
@@ -61,6 +82,7 @@ export function useCityMind() {
     async (file: File) => {
       setStatus("analyzing");
       setError(null);
+      setRetryAction(null);
       setResult(null);
       setScene(null);
 
@@ -74,6 +96,7 @@ export function useCityMind() {
         setStatus("scene-ready");
       } catch (apiError) {
         setError(getClientError(apiError));
+        setRetryAction({ kind: "vision", file });
         setStatus("error");
       }
     },
@@ -85,6 +108,10 @@ export function useCityMind() {
       setImageFile(file);
       setStatus("image-ready");
       setError(null);
+      setRetryAction(null);
+      setScene(null);
+      setResult(null);
+      setChatMessages([]);
       setImagePreview((current) => {
         if (current) {
           URL.revokeObjectURL(current);
@@ -92,10 +119,19 @@ export function useCityMind() {
 
         return URL.createObjectURL(file);
       });
-      void analyzeSelectedImage(file);
     },
-    [analyzeSelectedImage]
+    []
   );
+
+  const confirmImage = useCallback(() => {
+    if (!imageFile) {
+      setError("Choose a photo before asking CityMind to analyze it.");
+      setStatus("error");
+      return;
+    }
+
+    void analyzeSelectedImage(imageFile);
+  }, [analyzeSelectedImage, imageFile]);
 
   const clearImage = useCallback(() => {
     setImageFile(null);
@@ -110,13 +146,20 @@ export function useCityMind() {
     setResult(null);
     setChatMessages([]);
     setError(null);
+    setRetryAction(null);
     setStatus("idle");
   }, []);
 
   const submitPrompt = useCallback(
-    async (prompt: string, nextPersona = persona, addConversation = true) => {
+    async (
+      prompt: string,
+      nextPersona = persona,
+      addConversation = true,
+      destinationQuery?: string
+    ) => {
       if (!scene) {
         setError("Capture or upload an image before asking CityMind.");
+        setRetryAction(null);
         setStatus("error");
         return;
       }
@@ -125,20 +168,29 @@ export function useCityMind() {
 
       if (!trimmed) {
         setError("Ask a question before requesting a recommendation.");
+        setRetryAction(null);
         setStatus("error");
         return;
       }
 
+      const normalizedDestination = destinationQuery?.trim();
+      const userPrompt = normalizedDestination
+        ? `${trimmed}\n\nDestination: ${normalizedDestination}`
+        : trimmed;
+
       setStatus("reasoning");
       setError(null);
+      setRetryAction(null);
       setLastPrompt(trimmed);
+      setLastDestinationQuery(normalizedDestination ?? "");
 
       try {
         const reasoning = await postJson<ReasoningResult>("/api/reason", {
           scene,
           persona: nextPersona,
-          userPrompt: trimmed,
-          location: activeLocation
+          userPrompt,
+          location: activeLocation,
+          destinationQuery: normalizedDestination || undefined
         });
         setResult(reasoning);
         setStatus("ready");
@@ -163,6 +215,13 @@ export function useCityMind() {
         }
       } catch (apiError) {
         setError(getClientError(apiError));
+        setRetryAction({
+          kind: "reasoning",
+          prompt: trimmed,
+          persona: nextPersona,
+          addConversation,
+          destinationQuery: normalizedDestination
+        });
         setStatus("error");
       }
     },
@@ -174,19 +233,21 @@ export function useCityMind() {
       setPersonaState(nextPersona);
 
       if (scene && lastPrompt) {
-        void submitPrompt(lastPrompt, nextPersona, false);
+        void submitPrompt(lastPrompt, nextPersona, false, lastDestinationQuery);
       }
     },
-    [lastPrompt, scene, submitPrompt]
+    [lastDestinationQuery, lastPrompt, scene, submitPrompt]
   );
 
   const sendChatMessage = useCallback(
-    async (message: string) => {
+    async (message: string, conversationOverride?: ChatMessage[]) => {
       const trimmed = message.trim();
 
       if (!trimmed) {
         return;
       }
+
+      const conversation = conversationOverride ?? chatMessages;
 
       const userMessage: ChatMessage = {
         id: createId("msg"),
@@ -195,13 +256,16 @@ export function useCityMind() {
         createdAt: new Date().toISOString()
       };
 
-      setChatMessages((messages) => [...messages, userMessage]);
+      if (!conversationOverride) {
+        setChatMessages((messages) => [...messages, userMessage]);
+      }
       setStatus("chatting");
       setError(null);
+      setRetryAction(null);
 
       try {
         const response = await postJson<ChatResponse>("/api/chat", {
-          conversation: chatMessages,
+          conversation,
           latestMessage: trimmed,
           persona,
           scene: scene ?? undefined,
@@ -219,6 +283,7 @@ export function useCityMind() {
         setStatus(result ? "ready" : "scene-ready");
       } catch (apiError) {
         setError(getClientError(apiError));
+        setRetryAction({ kind: "chat", message: trimmed, conversation });
         setStatus("error");
       }
     },
@@ -226,13 +291,57 @@ export function useCityMind() {
   );
 
   const retry = useCallback(() => {
-    if (imageFile) {
-      void analyzeSelectedImage(imageFile);
-    } else {
-      setStatus("idle");
+    if (!retryAction) {
+      setStatus(imageFile ? "image-ready" : "idle");
       setError(null);
+      return;
     }
-  }, [analyzeSelectedImage, imageFile]);
+
+    if (retryAction.kind === "vision") {
+      void analyzeSelectedImage(retryAction.file);
+      return;
+    }
+
+    if (retryAction.kind === "reasoning") {
+      void submitPrompt(
+        retryAction.prompt,
+        retryAction.persona,
+        retryAction.addConversation,
+        retryAction.destinationQuery
+      );
+      return;
+    }
+
+    void sendChatMessage(retryAction.message, retryAction.conversation);
+  }, [analyzeSelectedImage, imageFile, retryAction, sendChatMessage, submitPrompt]);
+
+  const retryDetails = useMemo(() => {
+    if (retryAction?.kind === "vision") {
+      return {
+        label: "Retry scene analysis",
+        description: "We will analyze the photo you already selected."
+      };
+    }
+
+    if (retryAction?.kind === "reasoning") {
+      return {
+        label: "Retry recommendation",
+        description: "We will use the same scene, question, and persona."
+      };
+    }
+
+    if (retryAction?.kind === "chat") {
+      return {
+        label: "Retry reply",
+        description: "We will resend your last follow-up without duplicating it."
+      };
+    }
+
+    return {
+      label: "Try again",
+      description: "You can continue from the last completed step."
+    };
+  }, [retryAction]);
 
   useEffect(() => {
     return () => {
@@ -254,9 +363,12 @@ export function useCityMind() {
     permissionState,
     suggestedPrompts,
     lastPrompt,
+    lastDestinationQuery,
+    retryDetails,
     requestLocation,
     selectPersona,
     selectImage,
+    confirmImage,
     clearImage,
     submitPrompt,
     sendChatMessage,
