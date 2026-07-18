@@ -102,7 +102,7 @@ export const routeSummarySchema = z.object({
   durationSeconds: z.number().nonnegative(),
   accessible: z.boolean(),
   travelMode: z.literal("walking"),
-  source: z.enum(["osrm", "fallback"]),
+  source: z.enum(["mapbox", "osrm", "fallback"]),
   status: z.enum(["routed", "estimated"]),
   accessibility: z.object({
     status: z.enum(["unknown", "unverified", "verified"]),

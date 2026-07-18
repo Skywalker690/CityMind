@@ -115,6 +115,21 @@ Supported capabilities:
 
 Everything else is intentionally excluded.
 
+## MVP Experience
+
+CityMind is a single responsive workflow:
+
+1. Select a persona and capture, upload, or load a demo urban scene.
+2. Review the image, then explicitly confirm before vision analysis starts.
+3. Ask a question and optionally enter a destination query.
+4. Receive an explained recommendation, a truthfully labelled walking-route
+   state, and an interactive Mapbox visualization when available.
+5. Continue with context-aware follow-up chat.
+
+The header includes an accessible light/dark toggle. Loading, retries, an
+error boundary, and map/text fallbacks ensure an incomplete provider response
+does not strand the user.
+
 ---
 
 # Non Goals
@@ -167,16 +182,16 @@ Secondary
 
 * OpenAI Responses API
 * Vision-capable OpenAI model
-* Function Calling
 * Structured Outputs
 
 ---
 
 ## Mapping
 
-* Leaflet
-* OpenStreetMap
-* OSRM
+* Mapbox GL JS
+* Mapbox Search Geocoding
+* Mapbox Directions walking routes
+* OSRM foot routing as a secondary provider
 
 ---
 
@@ -209,21 +224,36 @@ Supabase will be used.
 Install dependencies:
 
 ```bash
-pnpm install --ignore-scripts
+pnpm install --frozen-lockfile
 ```
 
 Create a local environment file from `.env.example`.
 
-Required for live AI and maps:
+Required for live AI, destination search, and map rendering:
 
 ```env
 OPENAI_API_KEY=
-OSRM_BASE_URL=https://router.project-osrm.org
+OPENAI_MODEL=gpt-4.1-mini
+
+# Browser-safe public Mapbox token for map rendering.
+NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN=
+
+# Server-side Mapbox token for destination geocoding and walking directions.
+MAPBOX_ACCESS_TOKEN=
+
+# Optional secondary route provider. Set only to an endpoint configured with a
+# walking/foot profile; generic public demo endpoints do not guarantee this.
+OSRM_BASE_URL=
 ```
 
 During local development, CityMind reads `.env.local` and `.env` directly before
 falling back to inherited shell variables. This prevents stale system-level API
 keys from overriding the project file.
+
+`NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN` is intentionally browser-visible and must be
+a Mapbox public token (`pk.`). Keep `MAPBOX_ACCESS_TOKEN` server-only. The same
+public token can be used for both during a demo, although separate tokens make
+environment management clearer.
 
 Run the development server:
 
@@ -231,13 +261,44 @@ Run the development server:
 pnpm dev
 ```
 
-The MVP includes deterministic fallback behavior when OpenAI or OSRM is
-unavailable, so the core demo remains usable locally.
+The app is designed to fail safely when a provider is unavailable:
+
+* Missing or failed OpenAI calls return deterministic, persona-aware fallback
+  scene and recommendation data with clear warnings.
+* Text destinations are resolved through Mapbox. If destination search is
+  missing, unavailable, or cannot confidently find a place, CityMind does not
+  invent a route.
+* CityMind requests Mapbox walking directions first, then an OSRM foot-profile
+  route if the primary provider is unavailable. Only when both live providers
+  fail does it render an explicitly labelled estimated route.
+* If Mapbox GL cannot render in the browser, the map panel keeps route details
+  available and shows a local visual fallback.
+
+Provider timeouts are bounded to 30 seconds for AI operations and 10 seconds
+for mapping operations. No fallback claims live elevator, ramp, crowd, exit,
+or step-free-route information without evidence.
 
 The UI also includes a `Use Demo Scene` action backed by
 `public/demo/metro-station.svg` for repeatable hackathon demos when no camera
 image is available. The browser rasterizes that SVG into a JPEG before upload so
 live OpenAI vision can analyze it when `OPENAI_API_KEY` is configured.
+
+## Quality checks
+
+Run the full local quality suite before shipping a change:
+
+```bash
+pnpm format:check
+pnpm lint
+pnpm typecheck
+pnpm test
+pnpm build
+```
+
+Vitest covers validators, response normalizers, map result handling, and
+deterministic fallbacks. GitHub Actions runs the same formatting, lint,
+typecheck, test, and production-build checks on pull requests and pushes to
+`main`.
 
 ---
 

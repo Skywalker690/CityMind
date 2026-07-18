@@ -68,6 +68,8 @@ export function createFallbackRoute(input: {
   origin: Coordinates;
   destination: Destination;
   reason: string;
+  /** Use a reference label when the device has not supplied its location. */
+  originLabel?: string;
 }): RouteSummary {
   const directDistance = calculateDistanceMeters(
     input.origin,
@@ -80,7 +82,7 @@ export function createFallbackRoute(input: {
 
   return {
     origin: {
-      label: "Current location",
+      label: input.originLabel ?? "Current location",
       coordinates: input.origin,
       type: "origin"
     },

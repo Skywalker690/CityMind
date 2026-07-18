@@ -269,7 +269,7 @@ Instead of:
 
 Prefer:
 
-"Use Entrance B because it provides elevator access and reduces physical effort for users carrying luggage."
+"If the available evidence confirms elevator access at Entrance B, use it to reduce physical effort; otherwise ask staff or check signage before committing."
 
 ---
 

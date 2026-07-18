@@ -49,12 +49,13 @@ The objective is to use the smallest set of technologies that delivers an except
 | Icons           | Lucide React         |
 | AI              | OpenAI Responses API |
 | Vision          | OpenAI Vision        |
-| Maps            | Leaflet + OpenStreetMap |
-| Routing         | OSRM                 |
+| Map rendering   | Mapbox GL JS         |
+| Geocoding       | Mapbox Search Geocoding |
+| Directions      | Mapbox Directions, then OSRM foot routing |
 | Deployment      | Vercel               |
 | Package Manager | pnpm                 |
 | Validation      | Zod                  |
-| Forms           | React Hook Form      |
+| Forms           | Native controlled React forms |
 | HTTP            | Native Fetch         |
 
 ---
@@ -229,21 +230,29 @@ The AI should:
 
 # Maps
 
-## Leaflet + OpenStreetMap + OSRM
+## Mapbox GL JS + Mapbox APIs + OSRM
 
 Responsibilities
 
-* Map rendering
-* OpenStreetMap tile display
-* Route geometry
-* Route distance and duration
-* Location visualization
+* Mapbox GL JS renders the browser map, route GeoJSON, markers, attribution,
+  navigation controls, and a recenter control.
+* Mapbox Search Geocoding resolves text destinations for the server.
+* Mapbox Directions is the preferred source for walking geometry, route metrics,
+  and steps.
+* A configured OSRM foot-profile endpoint is the secondary live route provider.
+* A final local estimate is clearly labelled as an estimate only after both
+  live route providers fail.
 
-Chosen because it provides an open-source, no-key MVP map stack while
-preserving the required interactive map and route visualization workflow.
-OpenStreetMap public tile usage must remain lightweight and attribution must be
-shown. OSRM public routing is suitable for demo usage; production usage should
-use a hosted provider plan or self-hosted routing.
+Mapbox is required by the repository architecture and offers a coherent map,
+geocoding, and directions experience. `mapbox-gl` is dynamically loaded in the
+client-only map component so it does not inflate the server render. The map
+always retains a keyboard-readable route summary and local visual fallback when
+a public Mapbox token is absent, unauthorized, or unsupported by the browser.
+
+Map data never proves accessibility by itself. The route contract keeps
+accessibility evidence and warnings separate from persona preferences, and the
+UI asks users to verify elevators, ramps, curb cuts, surface conditions, and
+closures on arrival.
 
 ---
 
@@ -265,17 +274,18 @@ Never trust raw AI responses.
 
 # Forms
 
-## React Hook Form
+## Native Controlled Inputs
 
-Purpose
+The MVP keeps its small number of forms in local React state:
 
-Manage:
-
-* User prompts
+* Destination query
+* Chat prompt
+* Camera upload selection
 * Persona selection
-* Future configuration forms
 
-Keep forms lightweight and performant.
+This keeps the workflow readable and avoids global form state. `react-hook-form`
+remains an available dependency for future larger forms, but the current
+CityMind interaction flow does not require it.
 
 ---
 
@@ -285,21 +295,44 @@ Use the native Fetch API.
 
 No additional HTTP client is required for the MVP.
 
+Server-side provider calls use a shared `AbortController` timeout helper:
+
+* OpenAI vision, reasoning, and chat: 30 seconds.
+* Mapbox geocoding and directions: 10 seconds.
+* Secondary OSRM routing: 10 seconds.
+
+Provider failures are normalized into typed fallback or error responses; raw
+provider exceptions are never shown in the UI.
+
 ---
 
 # Environment Variables
 
 All secrets must live in environment variables.
 
-Required variables:
+Environment contract (`.env.example` is authoritative):
 
 ```env
+# Server-only OpenAI credentials.
 OPENAI_API_KEY=
+OPENAI_MODEL=gpt-4.1-mini
 
-OSRM_BASE_URL=https://router.project-osrm.org
+# Browser-safe public token for Mapbox GL JS.
+NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN=
+
+# Server-only token for Mapbox destination search and walking directions.
+MAPBOX_ACCESS_TOKEN=
+
+# Optional secondary route provider. Set this only to a server configured with
+# a walking/foot profile; generic public demo endpoints do not guarantee it.
+OSRM_BASE_URL=
 ```
 
-Never expose server-side secrets to the client.
+`NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN` must be a Mapbox public token (`pk.`) and is
+expected to be visible in browser requests. `OPENAI_API_KEY` and any secret
+Mapbox token must remain server-only. In development, `.env.local` and `.env`
+take precedence over inherited shell values; production uses the deployment
+environment.
 
 ---
 
@@ -314,6 +347,29 @@ Preferred because:
 * Reliable lockfile
 
 Use one package manager consistently throughout the project.
+
+---
+
+# Verification and CI
+
+## Vitest + GitHub Actions
+
+Vitest provides focused unit coverage for schemas, normalizers, deterministic
+fallback data, destination resolution, and route-provider normalization.
+
+The `Quality` GitHub Actions workflow runs on pull requests and pushes to
+`main`. It installs from the lockfile and executes, in order:
+
+```text
+pnpm format:check
+pnpm lint
+pnpm typecheck
+pnpm test
+pnpm build
+```
+
+The workflow is a quality gate, not a substitute for a provider-backed manual
+demo with real environment variables.
 
 ---
 

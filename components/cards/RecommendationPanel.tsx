@@ -10,6 +10,7 @@ import {
 import { EmptyState } from "@/components/common/EmptyState";
 import { RecommendationCard } from "@/components/cards/RecommendationCard";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type {
   NearbyPlace,

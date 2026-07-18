@@ -50,7 +50,8 @@ export interface RouteLineString {
   coordinates: [number, number][];
 }
 
-export type RouteSource = "osrm" | "fallback";
+/** The provider that supplied the route geometry and instructions. */
+export type RouteSource = "mapbox" | "osrm" | "fallback";
 
 export type RouteStatus = "routed" | "estimated";
 

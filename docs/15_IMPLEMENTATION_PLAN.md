@@ -2,732 +2,239 @@
 
 **Project:** CityMind
 
-**Version:** 1.0
+**Version:** 1.1
 
-**Status:** Development Roadmap
+**Status:** MVP Implementation and Verification Plan
 
 ---
 
 # Purpose
 
-This document defines the complete implementation strategy for CityMind.
+This document records the delivery plan and current implementation state for the
+CityMind MVP. The product remains focused on one complete experience:
 
-Unlike the PRD, this document answers:
+~~~text
+Photo -> Scene understanding -> Persona and destination context
+      -> Reasoning -> Explained recommendation -> Route visualization -> Follow-up
+~~~
 
-* What should be built?
-* In what order?
-* What are the dependencies?
-* What is critical?
-* What can be skipped?
-
-This document is the engineering execution plan.
-
----
-
-# Implementation Philosophy
-
-The objective is **not** to build every possible feature.
-
-The objective is to build the **best possible demo**.
-
-Every implementation decision should maximize demo quality.
+The plan intentionally excludes accounts, payments, notifications, history,
+analytics, admin workflows, and other scope that does not strengthen this flow.
 
 ---
 
-# Development Principles
+# Delivery Principles
 
-Always:
-
-* Build vertically.
-* Finish features completely.
-* Test continuously.
-* Keep the application deployable.
-
-Never:
-
-* Build multiple unfinished features.
-* Prematurely optimize.
-* Refactor during the hackathon.
-* Introduce unnecessary abstractions.
+* Build a complete vertical slice before expanding scope.
+* Keep the client, API, services, prompts, and types synchronized.
+* Prefer transparent degradation to fabricated urban facts.
+* Validate external and AI output before it reaches the UI.
+* Test contracts and fallbacks without needing live credentials.
+* Treat a route as walking guidance, not proof of accessibility.
 
 ---
 
-# Development Order
+# Current MVP Status
 
-Implementation follows seven phases.
+## Phase 1 - Foundation: Complete
 
-```text
-Foundation
+Delivered:
 
-↓
+* Next.js App Router, TypeScript, Tailwind, shadcn/ui, Framer Motion, Zod, and
+  OpenAI Responses API integration.
+* Modular app, component, hook, service, prompt, type, and test boundaries.
+* Shared API success/error envelopes and runtime input validation.
+* Environment template and Vercel-compatible application structure.
 
-Core UI
+## Phase 2 - Guided Experience: Complete
 
-↓
+Delivered:
 
-Vision AI
+* Single-workspace responsive layout with inline onboarding.
+* Persona selection, location request, destination query, camera, map, and chat
+  panels.
+* Light/dark theme toggle using shared semantic CSS tokens.
+* Explicit image review and Confirm and analyze step.
+* Empty, loading, recovery, and framework-level error-boundary states.
+* Recommendation and nearby-place actions that move focus to the relevant
+  workflow section.
 
-↓
+## Phase 3 - Vision: Complete
 
-Urban Reasoning
+Delivered:
 
-↓
+* Browser camera capture, image upload, retake, replacement, and a deterministic
+  demo scene.
+* Image-size and MIME validation at the API boundary.
+* OpenAI structured vision output parsed by Zod.
+* Persona-neutral deterministic fallback scene data with visible uncertainty.
 
-Maps
+## Phase 4 - Reasoning and Conversation: Complete
 
-↓
+Delivered:
 
-Polish
+* Context merging for scene, persona, question, location, and optional
+  destination.
+* Prompt loading from the prompts directory only.
+* Structured, validated OpenAI reasoning and follow-up chat output.
+* Persona-specific fallback recommendations that do not invent infrastructure.
+* Current-session chat context and operation-specific retry behavior.
 
-↓
+## Phase 5 - Destinations and Maps: Complete
 
-Demo
-```
+Delivered:
 
-Each phase depends on the previous one.
+* Typed destinationQuery and destination contracts.
+* Mapbox Geocoding for text destination resolution.
+* Mapbox Directions as the preferred walking-route provider.
+* Configured foot-profile OSRM as a secondary live route provider.
+* Honest estimated route only after both live direction providers fail.
+* Mapbox GL JS rendering with route GeoJSON, markers, navigation controls,
+  recenter action, and text/local visual fallback.
+* Separate route source, route status, and accessibility evidence/warning
+  fields. Persona priorities never mark a route as verified accessible.
 
----
+## Phase 6 - Resilience and Accessibility: Complete
 
-# Phase 1 — Foundation
+Delivered:
 
-## Goal
+* Shared abortable timeout helper: 30 seconds for OpenAI work and 10 seconds for
+  mapping work.
+* Typed fallback behavior for AI, routing, destination resolution, and map
+  rendering.
+* Keyboard navigation, visible focus, status messaging, reduced-motion support,
+  responsive layouts, skip link, and text route alternatives.
+* Friendly error states that preserve the last valid workflow context.
 
-Establish a stable project structure.
+## Phase 7 - Automated Quality: Complete
 
----
+Delivered:
 
-### Tasks
-
-* Initialize Next.js project.
-* Configure TypeScript.
-* Install Tailwind CSS.
-* Install shadcn/ui.
-* Install Framer Motion.
-* Configure ESLint.
-* Configure Prettier.
-* Configure environment variables.
-* Create folder structure.
-* Create base layout.
-
----
-
-### Deliverables
-
-* Working application.
-* Clean architecture.
-* Responsive layout.
-* Shared design tokens.
-
----
-
-### Exit Criteria
-
-Project runs successfully.
-
-Repository structure matches documentation.
-
----
-
-# Phase 2 — Core UI
-
-## Goal
-
-Build the complete interface without functionality.
-
----
-
-### Tasks
-
-Landing Page
-
-Home Screen
-
-Navigation
-
-Camera Card
-
-Persona Selector
-
-Recommendation Cards
-
-Chat Layout
-
-Interactive Map Placeholder
-
-Loading Components
-
-Error Components
-
-Empty States
+* Vitest coverage for validators, normalizers, fallback data, destination
+  resolution, and route-provider behavior.
+* Formatting, linting, typechecking, test, and production build scripts.
+* GitHub Actions Quality workflow on pull requests and pushes to main.
 
 ---
 
-### Deliverables
+# Map and Route Decision Tree
 
-Complete static interface.
+~~~text
+Destination coordinates
+        |
+        +--> use exact coordinates
+        |
+Destination query / label / prompt phrase
+        |
+        v
+Mapbox Geocoding
+        |
+        +--> unresolved -> show typed resolution message; no route
+        |
+        v
+Mapbox Directions walking
+        |
+        +--> usable route -> source: mapbox, status: routed
+        |
+        v
+OSRM foot routing
+        |
+        +--> usable route -> source: osrm, status: routed
+        |
+        v
+Local estimate
+        |
+        --> source: fallback, status: estimated, verification warnings
+~~~
 
----
-
-### Exit Criteria
-
-Every page exists.
-
-Responsive layout complete.
-
----
-
-# Phase 3 — Vision AI
-
-## Goal
-
-Integrate image understanding.
-
----
-
-### Tasks
-
-Image Upload
-
-Camera
-
-Image Preview
-
-Vision API Integration
-
-Structured Vision Output
-
-Loading States
-
-Retry Flow
+Accessibility confirmation is independent of the decision tree. A map route can
+be live while step-free infrastructure remains unverified.
 
 ---
 
-### Deliverables
+# Environment and Deployment Readiness
 
-Image
+Copy .env.example into a local environment file and configure as needed:
 
-↓
+~~~env
+OPENAI_API_KEY=
+OPENAI_MODEL=gpt-4.1-mini
+NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN=
+MAPBOX_ACCESS_TOKEN=
+OSRM_BASE_URL=
+~~~
 
-Vision
+Deployment is Vercel-ready once the production environment contains the
+appropriate provider credentials. The public Mapbox browser token is expected
+to be exposed to the browser; OpenAI and server Mapbox credentials are not.
 
-↓
+OSRM is optional and must point to a provider configured with a walking/foot
+profile. A generic public route endpoint must not be described as a reliable
+walking fallback unless its profile has been verified.
 
-Structured Scene
-
----
-
-### Exit Criteria
-
-AI consistently analyzes uploaded images.
-
----
-
-# Phase 4 — Urban Reasoning
-
-## Goal
-
-Implement the core intelligence.
+A provider-free local demo remains usable, but it deliberately presents
+fallback data and warnings rather than live provider claims.
 
 ---
 
-### Tasks
+# Verification Sequence
 
-Context Builder
+Run these checks before merging or demonstrating a change:
 
-Persona Context
+~~~text
+pnpm format:check
+pnpm lint
+pnpm typecheck
+pnpm test
+pnpm build
+~~~
 
-Prompt Loader
+Then perform one manual workflow in each of these modes:
 
-Reasoning Service
+1. Live mode with OpenAI and Mapbox configured.
+2. No OpenAI key, confirming structured fallback vision/reasoning/chat.
+3. Missing or invalid Mapbox public token, confirming map text/local fallback.
+4. Missing destination token or unmatched text destination, confirming no
+   guessed route.
+5. Live route provider failure, confirming an explicitly labelled estimate only
+   after the secondary provider is attempted.
+6. Keyboard-only path through capture, confirmation, destination, route, and
+   chat.
+7. Reduced-motion and dark-theme checks.
 
-Recommendation Generator
-
-Structured Output
-
----
-
-### Deliverables
-
-Vision
-
-↓
-
-Reasoning
-
-↓
-
-Recommendations
-
----
-
-### Exit Criteria
-
-Recommendations adapt to personas.
-
-Reasoning is explainable.
+The automated suite validates contracts and fallbacks. Manual checks validate
+browser camera behavior, Mapbox rendering, provider credentials, and mobile
+layout.
 
 ---
 
-# Phase 5 — Maps
+# Definition of Done
 
-## Goal
+A CityMind MVP change is complete only when:
 
-Visualize AI recommendations.
-
----
-
-### Tasks
-
-Leaflet + OpenStreetMap + OSRM
-
-Current Location
-
-Destination Marker
-
-Route Display
-
-Recommendation Overlay
+* The code follows the documented layered architecture.
+* Input and provider output are validated and typed.
+* Loading, success, error, and retry states are present.
+* AI and fallback guidance clearly distinguishes certainty from assumptions.
+* A textual destination is never silently replaced with a default destination.
+* Map rendering failure does not hide route information.
+* Accessibility is not claimed without evidence.
+* Relevant documentation, tests, and the CI quality gate are updated.
+* The quality commands and an appropriate manual smoke test pass.
 
 ---
 
-### Deliverables
-
-Recommendation
-
-↓
-
-Map
-
----
-
-### Exit Criteria
-
-Map updates correctly after reasoning.
-
----
-
-# Phase 6 — Polish
-
-## Goal
-
-Transform prototype into product.
-
----
-
-### Tasks
-
-Animations
-
-Loading Improvements
-
-Better Empty States
-
-Improved Error Handling
-
-Responsive Refinement
-
-Accessibility Review
-
-Micro Interactions
-
-Performance Optimization
-
----
-
-### Deliverables
-
-Premium user experience.
-
----
-
-### Exit Criteria
-
-Application feels production quality.
-
----
-
-# Phase 7 — Demo Preparation
-
-## Goal
-
-Optimize for judging.
-
----
-
-### Tasks
-
-Prepare Demo Images
-
-Prepare Demo Questions
-
-Verify AI Responses
-
-Improve Timing
-
-Practice Presentation
-
-Reduce Latency
-
-Fix Visual Bugs
-
----
-
-### Deliverables
-
-Reliable demo.
-
----
-
-### Exit Criteria
-
-Complete demo can be performed repeatedly without failure.
-
----
-
-# Feature Dependency Graph
-
-```text
-Foundation
-
-↓
-
-UI
-
-↓
-
-Camera
-
-↓
-
-Vision
-
-↓
-
-Reasoning
-
-↓
-
-Recommendations
-
-↓
-
-Map
-
-↓
-
-Conversation
-
-↓
-
-Polish
-```
-
-Nothing should bypass this dependency order.
-
----
-
-# Component Build Order
-
-1.
-
-App Layout
-
-2.
-
-Navigation
-
-3.
-
-Hero Section
-
-4.
-
-Persona Selector
-
-5.
-
-Camera
-
-6.
-
-Image Upload
-
-7.
-
-Vision Results
-
-8.
-
-Recommendation Cards
-
-9.
-
-Map
-
-10.
-
-Chat
-
-11.
-
-Animations
-
-12.
-
-Responsive Refinement
-
----
-
-# Service Build Order
-
-1.
-
-OpenAI Service
-
-2.
-
-Vision Service
-
-3.
-
-Prompt Loader
-
-4.
-
-Reasoning Service
-
-5.
-
-Map Service
-
-6.
-
-Conversation Service
-
----
-
-# API Build Order
-
-1.
-
-Health
-
-2.
-
-/vision
-
-3.
-
-/reason
-
-4.
-
-/chat
-
-5.
-
-/map
-
----
-
-# Testing After Every Phase
-
-Never wait until the end.
-
-After every phase verify:
-
-* Build succeeds.
-* TypeScript passes.
-* No console errors.
-* Mobile layout works.
-* Desktop layout works.
-
----
-
-# Definition of Complete
-
-A phase is complete only if:
-
-* Implementation finished.
-* Manual testing complete.
-* Documentation updated.
-* No critical bugs.
-* Ready for next phase.
-
----
-
-# Risk Management
-
-## High Risk
-
-Vision API failures.
-
-Mitigation
-
-Graceful retry.
-
----
-
-## High Risk
-
-Slow AI responses.
-
-Mitigation
-
-Streaming responses.
-
-Loading indicators.
-
----
-
-## Medium Risk
-
-Map integration.
-
-Mitigation
-
-Implement after reasoning engine.
-
----
-
-## Medium Risk
-
-Responsive issues.
-
-Mitigation
-
-Develop mobile-first.
-
----
-
-# Scope Protection
-
-During implementation, reject features that are not directly related to:
-
-* Vision
-* Reasoning
-* Recommendations
-* Maps
-* Personas
-
-Examples of rejected scope:
-
-* Authentication
-* Notifications
-* Dashboards
-* User Profiles
-* Admin Panels
-* Saved History
-* Analytics
-
----
-
-# Deployment Strategy
-
-Deploy continuously.
-
-Every major phase should end with:
-
-* Successful build.
-* Successful deployment.
-* Working demo.
-
-Never allow the application to remain broken.
-
----
-
-# Engineering Checklist
-
-Before writing any code:
-
-* Read README.
-* Read PROJECT_OVERVIEW.
-* Read PRD.
-* Read Architecture.
-* Read Feature Specification.
-
-Before committing:
-
-* Run lint.
-* Verify types.
-* Test manually.
-* Update documentation.
-
----
-
-# Final MVP Checklist
-
-Foundation
-
-☐
-
-UI
-
-☐
-
-Vision AI
-
-☐
-
-Reasoning
-
-☐
-
-Persona Switching
-
-☐
-
-Map Integration
-
-☐
-
-Recommendation Cards
-
-☐
-
-Chat
-
-☐
-
-Animations
-
-☐
-
-Responsive Design
-
-☐
-
-Error Handling
-
-☐
-
-Deployment
-
-☐
-
-Demo Ready
-
-☐
-
----
-
-# Guiding Principle
-
-Current implementation status:
-
-* Foundation, UI, vision, reasoning, persona switching, map integration,
-  recommendation cards, chat, animations, responsive design, and error handling
-  are implemented.
-* Live OpenAI and OSRM paths are implemented. OSRM defaults to the public demo
-  endpoint and can be replaced with `OSRM_BASE_URL`.
-* Deterministic fallback mode is implemented for local demos without external
-  credentials.
-* A local demo scene asset is available at `public/demo/metro-station.svg` and
-  can be loaded from the camera panel.
-* Deployment is ready for Vercel after environment variables are configured.
-
-The implementation should optimize for **clarity over complexity**.
-
-Every hour invested should make the **Vision → Context → Urban Reasoning → Recommendation** workflow more impressive.
-
-If a task does not strengthen the core demo, it should not be implemented during the hackathon.
+# Known Product Boundaries
+
+These are deliberate MVP boundaries, not hidden defects:
+
+* No user accounts, persistence, or saved history.
+* No live transit, crowd, weather, or verified accessibility-data integration.
+* No guarantee that a walking route is step-free.
+* No place-search result is treated as a confirmed operational service without
+  verification.
+* No offline routing or maps.
+
+Future expansion may add trusted accessibility data, transit feeds, and
+persistent preferences only if it preserves the core vision-to-recommendation
+experience.

@@ -37,83 +37,29 @@ Every component should solve one problem only.
 # Component Hierarchy
 
 ```text
-App
+app/page.tsx
+└── CityMindApp
+    ├── Header
+    │   ├── workflow status
+    │   ├── location request
+    │   └── light/dark theme toggle
+    ├── Inline onboarding (only before a scene is selected)
+    ├── PersonaSelector
+    ├── CameraCard
+    │   ├── camera / upload / demo-scene selection
+    │   ├── image preview and explicit confirmation
+    │   └── AnalysisSteps
+    ├── Destination query form
+    ├── ErrorState / VisionSummary / RecommendationPanel
+    │   ├── RecommendationCard
+    │   └── nearby-place follow-up actions
+    ├── InteractiveMap
+    │   ├── dynamically loaded Mapbox GL map
+    │   ├── route GeoJSON, markers, controls, and status
+    │   └── text and local visual fallback
+    └── ChatPanel
 
-├── Layout
-
-│
-
-├── Home Page
-
-│ ├── Hero
-
-│ ├── Persona Selector
-
-│ ├── Camera Card
-
-│ ├── Upload Button
-
-│ └── AI Prompt Suggestions
-
-│
-
-├── Camera Module
-
-│ ├── Camera Preview
-
-│ ├── Image Capture
-
-│ ├── Image Upload
-
-│ ├── Image Preview
-
-│ └── Analysis Status
-
-│
-
-├── Chat Module
-
-│ ├── Conversation
-
-│ ├── Message Bubble
-
-│ ├── Typing Indicator
-
-│ ├── Prompt Input
-
-│ └── Suggested Questions
-
-│
-
-├── Recommendation Module
-
-│ ├── Recommendation Card
-
-│ ├── Reason Card
-
-│ ├── Confidence Badge
-
-│ ├── Warning Card
-
-│ └── Nearby Places
-
-│
-
-├── Map Module
-
-│ ├── Map View
-
-│ ├── Route Overlay
-
-│ ├── Marker
-
-│ ├── Route Legend
-
-│ └── Bottom Sheet
-
-│
-
-└── Shared UI
+app/error.tsx and app/loading.tsx provide framework-level recovery states.
 ```
 
 ---
@@ -126,13 +72,12 @@ Responsible for page structure.
 
 Examples
 
-* AppLayout
-* MainContainer
-* Sidebar
-* Header
-* Footer
+* `CityMindApp`
+* Header and onboarding sections within `CityMindApp`
+* Three-column responsive workflow layout
 
-No business logic.
+It owns composition, focus movement, local theme state, and forwarding actions
+to `useCityMind`; provider calls remain outside the layout.
 
 ---
 
@@ -145,7 +90,7 @@ Examples
 * CameraCard
 * PersonaSelector
 * RecommendationPanel
-* MapPanel
+* InteractiveMap
 * ChatPanel
 
 These may compose multiple presentation components.
@@ -175,11 +120,10 @@ Display AI-specific states.
 
 Examples
 
-* AIThinking
-* ReasoningTimeline
 * RecommendationCard
-* ConfidenceIndicator
 * VisionSummary
+* AnalysisSteps
+* ErrorState
 
 These components never call AI directly.
 
@@ -187,60 +131,42 @@ These components never call AI directly.
 
 ## Map Components
 
-Examples
-
-* MapContainer
-* RouteOverlay
-* Marker
-* DestinationCard
-* CurrentLocation
+`InteractiveMap` is the one map feature component. It dynamically imports
+Mapbox GL JS after hydration, renders normalized GeoJSON supplied in
+`RouteSummary`, marks origin and destination, exposes navigation/recenter
+controls, and preserves text directions when the map cannot initialize. It
+never geocodes or requests directions in the browser.
 
 ---
 
 ## Chat Components
 
-Examples
-
-* ChatContainer
-* ChatMessage
-* UserMessage
-* AIMessage
-* PromptInput
-* SuggestedPrompt
+`ChatPanel` contains the active-session transcript, suggested prompts, a
+multiline input, and loading/disabled states. It forwards messages to the
+workflow hook rather than calling OpenAI directly.
 
 ---
 
 ## Camera Components
 
-Examples
-
-* CameraPreview
-* CaptureButton
-* UploadButton
-* ImagePreview
-* AnalysisProgress
+`CameraCard` owns the browser camera stream through `useCamera`, upload and
+demo-scene selection, preview, explicit “Confirm and analyze” action, retake,
+and analysis progress. Selecting a photo never starts AI analysis until the
+user confirms it.
 
 ---
 
 # Shared Components
 
-Located inside
+Reusable primitives live in `components/ui/`; workflow feedback helpers live in
+`components/common/`.
 
-```text
-components/common/
-```
+Implemented examples
 
-Examples
-
-* Button
-* Card
-* Badge
-* Loader
-* Modal
-* EmptyState
-* ErrorState
-* Skeleton
-* Tooltip
+* `Button`, `Card`, `Badge`, `Input`, `Progress`, and `Textarea`
+* `AnalysisSteps`
+* `EmptyState`
+* `ErrorState`
 
 ---
 
@@ -263,10 +189,12 @@ Must NOT contain business logic.
 Responsible for:
 
 * Feature UI
-* User interaction
+* User interaction and accessible status feedback
 * Event forwarding
 
-Must NOT call external APIs directly.
+Must NOT call CityMind providers directly. `InteractiveMap` may initialize the
+Mapbox GL browser renderer with its public token, but destination resolution and
+directions remain server-side.
 
 ---
 
@@ -289,23 +217,19 @@ No React.
 Preferred communication:
 
 ```text
-Page
-
-↓
-
-Feature Component
-
-↓
-
-Hook
-
-↓
-
-Service
-
-↓
-
-API
+CityMindApp
+      |
+      v
+Feature component
+      |
+      v
+useCityMind / local hook
+      |
+      v
+/api route handler
+      |
+      v
+service and provider
 ```
 
 Avoid sibling-to-sibling communication.
@@ -318,52 +242,53 @@ Avoid sibling-to-sibling communication.
 
 Use for:
 
-* Modal visibility
-* Input fields
-* Temporary UI
+* Destination query and theme mode in `CityMindApp`
+* Camera stream and Mapbox GL lifecycle
+* Input fields, action notices, and temporary UI
 
 ---
 
-## Shared State
+## Workflow State
 
-Use for:
-
-* Persona
-* Conversation
-* Uploaded image
-* AI response
-
-Shared state should be minimal.
+`useCityMind` is the single local workflow coordinator. It owns persona,
+image preview/file, scene, recommendation, conversation, retries, and location
+for the active browser session. It uses the explicit statuses `idle`,
+`image-ready`, `analyzing`, `scene-ready`, `reasoning`, `ready`, `chatting`,
+and `error`; no global state library or persistence is required.
 
 ---
 
 # Component Lifecycle
 
-Camera
+Onboarding
 
 ↓
 
-Image Selected
+Image selected
 
 ↓
 
-Vision Analysis
+User confirms photo
 
 ↓
 
-Reasoning
+Vision analysis
 
 ↓
 
-Recommendation
+Scene-ready question or destination query
 
 ↓
 
-Map Update
+Reasoning and typed route resolution
 
 ↓
 
-Conversation
+Recommendation and map update
+
+↓
+
+Contextual follow-up conversation
 
 Each stage should have dedicated UI states.
 
@@ -380,6 +305,10 @@ Every async component should support:
 
 No blank screens.
 
+`app/loading.tsx` covers initial route loading. `InteractiveMap` separately
+announces map loading and falls back to a text-readable visual when Mapbox is
+unavailable.
+
 ---
 
 # Error Components
@@ -393,22 +322,25 @@ Standardized error cards should exist for:
 * Invalid image
 * Network failure
 
+`app/error.tsx` catches unexpected route-segment rendering failures and offers
+both retry and return-home actions. Workflow retries preserve the appropriate
+last completed context: a selected image, scene/question/persona, or chat
+turn, rather than restarting the entire flow.
+
 ---
 
 # Animation Rules
 
 Use Framer Motion for:
 
-* Page transitions
-* Recommendation appearance
-* Loading indicators
-* Chat messages
-* Cards
-* Bottom sheets
+* Inline onboarding reveal
+* Guidance-card entry
+* State transitions that orient the user
 
 Avoid decorative animations.
 
-Animations should communicate state changes.
+Animations should communicate state changes and respect the reduced-motion
+preference exposed by the browser.
 
 ---
 
@@ -448,13 +380,11 @@ RecommendationCard.tsx
 
 VisionSummary.tsx
 
-ReasoningPanel.tsx
-
 PersonaSelector.tsx
 
 InteractiveMap.tsx
 
-PromptSuggestions.tsx
+ChatPanel.tsx
 ```
 
 Always use PascalCase.

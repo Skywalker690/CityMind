@@ -232,6 +232,7 @@ export function CityMindApp() {
           <PersonaSelector
             value={cityMind.persona}
             onChange={cityMind.selectPersona}
+            disabled={busy}
           />
           <CameraCard
             imagePreview={cityMind.imagePreview}

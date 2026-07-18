@@ -2,670 +2,276 @@
 
 **Project:** CityMind
 
-**Version:** 1.0
+**Version:** 1.1
 
-**Status:** User Interface & User Experience Specification
+**Status:** Implemented MVP Experience Contract
 
 ---
 
 # Purpose
 
-This document defines the complete UI/UX experience of CityMind.
-
-It describes every screen, interaction, layout, animation, navigation flow, responsive behavior, accessibility consideration, and visual hierarchy.
-
-Unlike the Design System, which defines visual language, this document defines **how users experience the application**.
-
-This document is the source of truth for frontend implementation.
+This document describes the CityMind MVP as users experience it. It is the
+frontend contract for the vision-first workflow, including its onboarding,
+photo confirmation, route honesty, map fallback, recovery, and accessibility
+behavior.
 
 ---
 
-# Design Philosophy
-
-CityMind should feel like an intelligent assistant instead of a traditional application.
-
-Every interaction should communicate:
-
-* Intelligence
-* Simplicity
-* Confidence
-* Speed
-* Trust
-
-The application should feel effortless.
-
----
-
-# UX Principles
-
-Every screen should satisfy:
-
-* One clear primary action
-* Minimal cognitive load
-* Fast navigation
-* Clear hierarchy
-* Immediate feedback
-* Context preservation
-* Accessibility-first
-
-Users should never wonder:
-
-> "What should I do next?"
-
----
-
-# Design Keywords
+# Experience Principles
 
 CityMind should feel:
 
-* Premium
-* AI-first
-* Calm
-* Spatial
-* Helpful
-* Modern
-* Human-centered
+* Calm, premium, and purposeful.
+* Vision-first rather than form-first.
+* Clear about what is known, estimated, and unverified.
+* Personal without requiring an account.
+* Fast to understand and forgiving when a provider is unavailable.
+
+Every screen has one primary next action. The app never asks users to interpret
+raw AI output or a provider error.
 
 ---
 
-# Navigation Structure
+# Navigation Model
 
-```text
-Landing
+CityMind is a single responsive workspace, not a multi-page onboarding funnel.
 
-↓
+~~~text
+Open CityMind
+      |
+      v
+Inline onboarding and photo capture
+      |
+      v
+Review and confirm the selected photo
+      |
+      v
+Scene understanding
+      |
+      v
+Ask a question and optionally add a destination
+      |
+      v
+Recommendation, route context, map, and follow-up chat
+~~~
 
-Home
-
-↓
-
-Capture Image
-
-↓
-
-Vision Analysis
-
-↓
-
-AI Conversation
-
-↓
-
-Recommendation
-
-↓
-
-Interactive Map
-
-↓
-
-Follow-up Questions
-```
-
-No deep navigation.
-
-Everything should be achievable within 2–3 interactions.
+The inline onboarding appears only before an image or scene exists. Its primary
+action scrolls and focuses the capture workflow. There is no separate landing,
+settings, or account screen in the MVP.
 
 ---
 
-# Information Architecture
+# Application Shell
 
-```text
-Home
-│
-├── Hero
-├── Persona
-├── Camera
-├── Suggested Prompts
-│
-Vision Result
-│
-├── Scene Summary
-├── AI Recommendation
-├── Reasoning
-├── Nearby Places
-│
-Map
-│
-Chat
-```
+## Header
 
----
+The header contains:
 
-# Screen List
+* CityMind identity and concise product explanation.
+* Workflow-status badge.
+* Optional location request with clear granted/loading/denied states.
+* A keyboard-accessible light/dark theme toggle.
 
-### 1. Landing
+The header must not hide the primary action behind navigation. The theme applies
+immediately for the current page session and is not a persisted account
+preference.
 
-Purpose
+## Main Layout
 
-Introduce CityMind.
+Desktop uses a three-column workspace:
 
-Contains
+~~~text
+Persona + camera | guidance and destination | map + conversation
+~~~
 
-* Logo
-* Tagline
-* CTA
-* Hero Illustration
+On smaller viewports, panels stack in workflow order. The mobile sequence is:
 
-Primary CTA
+~~~text
+Onboarding -> persona -> camera -> destination -> guidance -> map -> chat
+~~~
 
-> Start Exploring
+Sticky side panels are a desktop enhancement only; no important information is
+hidden when they unstick on tablet or mobile.
 
 ---
 
-### 2. Home
+# Hero Flow
 
-Purpose
+## 1. Choose Context
 
-Main entry point.
+Persona chips expose Tourist, Daily Commuter, Elderly, Wheelchair User, and
+Luggage Traveler. The selected state is visible and announced with native
+button semantics. Persona controls are disabled while CityMind is processing.
 
-Contains
+If a scene and prior question already exist, changing persona reruns the same
+reasoning context. It does not require another photo upload.
 
-* Hero section
-* Camera card
-* Upload button
-* Persona selector
-* Suggested prompts
+## 2. Capture or Upload a Scene
 
-This should be the cleanest page.
+The camera card supports:
 
----
+* Opening and stopping the browser camera.
+* Capturing a camera frame.
+* Uploading an image.
+* Loading a repeatable local demo scene.
+* Retaking, replacing, or discarding a photo.
 
-### 3. Camera Screen
+The UI must explain camera permission failure and keep upload available as an
+alternative.
 
-Purpose
+## 3. Review Before Analysis
 
-Capture surroundings.
+After selection, CityMind shows the image preview and an explicit Confirm and
+analyze action. AI analysis does not begin on image selection alone. The
+preview guidance asks users to check that the relevant entrance, signs, or path
+are visible.
 
-Contains
+Retake and choose-another actions remain available until analysis starts. While
+analysis is active, the preview receives a non-technical progress overlay and
+the analysis steps communicate what CityMind is doing.
 
-* Live preview
-* Capture button
-* Upload image
-* Retake
-* Flash indicator (optional)
+## 4. Understand the Scene
 
-After capture
+When vision completes, the scene summary appears alongside a clear
+scene-understood status. Suggested prompts change from generic ideas to
+contextual follow-ups. Low confidence and fallback observations are shown as
+warnings, not hidden behind confidence percentages alone.
 
-↓
+## 5. Ask and Plan
 
-Automatic AI analysis begins.
+The user can ask a natural-language question in the chat panel or select a
+suggested prompt. The optional destination field supports a place name such as
+Fort Kochi ferry. Its Plan route action is disabled until a scene exists and is
+not busy.
 
----
+A destination is passed as a typed destinationQuery. If no destination can be
+confidently resolved, CityMind explains whether it is missing, unavailable, or
+not found instead of drawing a route to a default place.
 
-### 4. Vision Analysis
+## 6. Receive and Act
 
-Purpose
+Recommendation cards present:
 
-Display AI processing.
+* Recommendation title and action.
+* Explanation and benefits.
+* Effort and confidence.
+* Suggested action.
+* Warnings and verification needs.
 
-Contains
+Recommendation actions move keyboard focus to the route/map area for navigation,
+accessibility, and transport advice, or to the conversation area for a
+follow-up. Nearby places use an Ask CityMind action instead of pretending to be
+live place data.
 
-* Image preview
-* Loading animation
-* Analysis progress
-* AI thinking indicator
+## 7. Inspect Route Context
 
-Avoid showing technical details.
+The map panel receives a normalized walking route after destination resolution.
 
-Instead communicate progress naturally.
+When Mapbox GL is available it displays:
 
-Example
+* Current location and resolved destination markers.
+* Route GeoJSON.
+* Distance, duration, travel mode, and turn summary.
+* Navigation and recenter controls.
+* Route source/status and an accessibility-verification notice.
 
-> Understanding your surroundings...
+A live route is visually distinct from an estimated fallback route. A walking
+route is never presented as step-free or accessible solely because the selected
+persona has accessibility needs.
 
----
+When Mapbox is unavailable, unauthorized, or unsupported, CityMind preserves
+the route summary and instructions in a text-readable local map fallback. This
+is a degraded visualization state, not a failed recommendation flow.
 
-### 5. AI Recommendation Screen
+## 8. Continue the Conversation
 
-Purpose
-
-Present the AI's answer.
-
-Contains
-
-* Recommendation Card
-* Reasoning Card
-* Confidence Indicator
-* Action Buttons
-
-Example
-
-Recommended Entrance
-
-Reason
-
-Benefits
-
-Open on Map
-
-Ask Follow-up
-
----
-
-### 6. Interactive Map
-
-Purpose
-
-Visualize recommendations.
-
-Display
-
-* Current location
-* Suggested route
-* Destination
-* Nearby landmarks
-
-The map should support:
-
-* Zoom
-* Pan
-* Re-center
-
-No excessive controls.
+Chat retains the active browser-session context only. It supports a multiline
+input, suggested prompts, disabled state before scene readiness, and a visible
+sending state. CityMind currently returns complete replies rather than
+token-streamed output.
 
 ---
 
-### 7. AI Chat
+# State Feedback
 
-Purpose
+| Workflow state | User-facing feedback | Primary recovery or next action |
+| --- | --- | --- |
+| idle | Capture or upload prompt and onboarding | Select a photo. |
+| image-ready | Preview and confirm prompt | Confirm, retake, or choose another. |
+| analyzing | Analysis steps and image overlay | Wait; retry the selected photo after failure. |
+| scene-ready | Scene summary and contextual prompts | Ask a question or add a destination. |
+| reasoning | Reasoning status and disabled duplicate actions | Wait; retry the same scene/question/persona after failure. |
+| ready | Recommendation, warnings, map, and chat | Act on guidance or ask a follow-up. |
+| chatting | Visible send state | Wait; retry the same follow-up after failure. |
+| error | Calm ErrorState with specific retry label | Retry the last incomplete operation. |
 
-Support natural follow-up conversations.
-
-Layout
-
-Conversation
-
-↓
-
-Prompt Suggestions
-
-↓
-
-Input
-
-↓
-
-Send Button
-
-Context must persist throughout the session.
+Initial route loading is covered by a page-level skeleton. An unexpected
+route-segment render failure is caught by the error boundary and provides retry
+and return-home actions.
 
 ---
 
-# Persona Selector
-
-Purpose
-
-Allow users to personalize recommendations.
-
-Supported Personas
-
-* Tourist
-* Daily Commuter
-* Elderly
-* Wheelchair User
-* Carrying Luggage
-
-Changing personas should instantly affect future reasoning.
-
----
-
-# Recommendation Cards
-
-Every recommendation card contains:
-
-* Icon
-* Title
-* Recommendation
-* Explanation
-* Benefits
-* Confidence
-* CTA
-
-Cards should be visually distinct from chat messages.
-
----
-
-# Confidence Indicator
-
-Purpose
-
-Communicate certainty.
-
-Levels
-
-High
-
-Medium
-
-Low
-
-Low confidence should encourage verification.
-
----
-
-# AI Thinking State
-
-Instead of generic spinners,
-
-display progressive steps.
-
-Example
-
-✓ Understanding the image
-
-↓
-
-✓ Identifying landmarks
-
-↓
-
-✓ Understanding your needs
-
-↓
-
-✓ Reasoning
-
-↓
-
-✓ Preparing recommendations
-
-This creates perceived intelligence.
-
----
-
-# Suggested Questions
-
-Display contextual prompts.
-
-Examples
-
-* Which entrance is best?
-* Is this accessible?
-* What should I visit nearby?
-* What's the fastest route?
-
-Prompts should adapt after image analysis.
-
----
-
-# Layout
-
-Desktop
-
-```text
---------------------------------
-
-Sidebar | Main | Map
-
---------------------------------
-```
-
----
-
-Tablet
-
-```text
-Main
-
-↓
-
-Map
-
-↓
-
-Chat
-```
-
----
-
-Mobile
-
-```text
-Hero
-
-↓
-
-Camera
-
-↓
-
-Recommendations
-
-↓
-
-Map
-
-↓
-
-Chat
-```
-
----
-
-# Mobile Experience
-
-The application should feel mobile-first.
-
-Important actions must remain reachable with one hand.
-
-Large touch targets.
-
-Minimal scrolling.
-
----
-
-# Animation Guidelines
-
-Use motion only when it improves understanding.
-
-Animate:
-
-* Cards
-* AI responses
-* Image transitions
-* Map updates
-* Page transitions
-
-Avoid decorative animations.
-
----
-
-# Loading States
-
-Every asynchronous operation must provide feedback.
-
-Examples
-
-Image Upload
-
-↓
-
-Uploading...
-
-Vision
-
-↓
-
-Understanding your surroundings...
-
-Reasoning
-
-↓
-
-Finding the best recommendation...
-
-Maps
-
-↓
-
-Preparing route...
-
----
-
-# Error States
-
-Every failure should explain:
-
-What happened.
-
-What users can do next.
-
-Never expose stack traces.
-
----
-
-# Empty States
-
-Examples
-
-No image
-
-"No image selected yet."
-
-No recommendation
-
-"Capture a location to receive AI guidance."
-
----
-
-# Visual Hierarchy
-
-Priority order
-
-1. Recommendation
-
-2. Reason
-
-3. Map
-
-4. Conversation
-
-5. Additional information
-
-Users should immediately notice the recommendation.
+# Error and Fallback Experience
+
+Users must always know what happened and what they can do next.
+
+* Camera failure: explain the permission or device issue; offer upload.
+* Invalid or oversized image: explain the image requirement without technical
+  provider details.
+* OpenAI failure: use typed deterministic fallback data and show uncertainty.
+* Destination search failure: ask for a more specific place; do not fabricate a
+  destination.
+* Live directions failure: show an explicitly estimated guide only after live
+  providers cannot route.
+* Map rendering failure: retain textual directions and local route visual.
+* Chat failure: preserve the user's last message and offer a no-duplicate retry.
+
+Retry behavior is operation-specific. It must not re-run vision after a chat
+error or silently discard a resolved scene when reasoning fails.
 
 ---
 
 # Accessibility
 
-Support
+CityMind supports:
 
-* Keyboard navigation
-* Screen readers
-* High contrast
-* Reduced motion
-* Semantic HTML
-* Proper focus order
+* Semantic headings, forms, buttons, lists, and labels.
+* Keyboard navigation with visible focus rings.
+* Skip link to the capture workflow.
+* Live status messaging for workflow, map, and action notices.
+* Screen-reader labels for camera, map, route controls, and theme control.
+* WCAG-aware semantic color tokens.
+* Reduced-motion behavior for animations and scroll/focus movement.
+* Text route metrics and instructions as an alternative to the interactive map.
 
----
-
-# User Feedback
-
-Every interaction should provide feedback.
-
-Examples
-
-Button pressed
-
-Image uploaded
-
-AI started
-
-AI completed
-
-Route updated
-
-Persona changed
-
-Never leave users wondering if an action succeeded.
+Accessibility statements in AI guidance remain cautious. CityMind asks users to
+verify elevators, ramps, curb cuts, surfaces, and closures when route data does
+not contain trusted evidence.
 
 ---
 
-# Responsive Rules
+# Responsive and Visual Rules
 
-Support
-
-* Mobile
-* Tablet
-* Desktop
-* Ultrawide
-
-Layouts should adapt without changing interaction patterns.
-
----
-
-# Interaction Principles
-
-Users should:
-
-Capture
-
-↓
-
-Understand
-
-↓
-
-Ask
-
-↓
-
-Receive
-
-↓
-
-Act
-
-Every screen should reinforce this flow.
+* Keep the recommendation visually ahead of secondary detail.
+* Preserve all capture, confirmation, destination, and retry actions on narrow
+  screens.
+* Use large touch targets and avoid hover-only behavior.
+* Do not trap critical content below an oversized map.
+* Use light and dark semantic tokens consistently; map-provider UI can be a
+  visual exception but must not reduce surrounding contrast.
+* Motion communicates workflow state and respects reduced-motion preferences.
 
 ---
 
-# UX Anti-Patterns
+# MVP Success Checklist
 
-Avoid:
+The experience is successful when a new user can:
 
-* Long forms
-* Dense settings
-* Hidden actions
-* Multiple primary buttons
-* Technical jargon
-* Modal overload
-* Excessive scrolling
-* Confirmation dialogs for simple actions
-
----
-
-# Hackathon Demo Optimization
-
-During the demo, the interface should emphasize:
-
-1. Camera
-2. AI reasoning
-3. Recommendation
-4. Map
-5. Persona switching
-
-These elements should be immediately visible without unnecessary navigation.
-
----
-
-# UX Success Checklist
-
-The experience is successful when:
-
-* Users understand the purpose within 30 seconds.
-* The camera workflow feels natural.
-* AI responses are easy to understand.
-* Recommendations feel personalized.
-* The interface remains uncluttered.
-* Every action has immediate visual feedback.
-* The product feels like a polished consumer application rather than a prototype.
-
----
-
-# Guiding Principle
-
-CityMind should not feel like an AI chatbot with a map attached.
-
-It should feel like an intelligent urban companion that understands the world around the user and quietly guides them toward the best decision with minimal effort and maximum clarity.
+1. Understand CityMind within 30 seconds.
+2. Capture or upload an urban scene and explicitly approve analysis.
+3. Select a persona and receive a contextual, explained recommendation.
+4. Add a destination and understand whether a route is live, estimated, or not
+   available.
+5. Continue after an AI, map, or chat issue without losing completed work.
+6. Use the core workflow with keyboard, screen reader, reduced motion, or
+   fallback map support.

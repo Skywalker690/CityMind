@@ -2,103 +2,150 @@
 
 **Project:** CityMind
 
-**Version:** 1.0
+**Version:** 1.1
 
-**Status:** API Contract
+**Status:** Implemented MVP Contract
 
 ---
 
 # Purpose
 
-This document defines the complete API contract for the CityMind MVP.
-
-Every frontend request, backend endpoint, AI interaction, request schema, response schema, validation rule, and error response is defined here.
-
-This document acts as the implementation contract between the frontend, API layer, and AI orchestration layer.
-
-Any API change must update this document.
+This document defines the HTTP contract between the CityMind client and its
+Next.js route handlers. Route handlers validate requests, call services, and
+return typed envelopes. OpenAI, Mapbox, and OSRM details never reach the
+browser as raw provider responses.
 
 ---
 
-# API Design Principles
+# Common Contract
 
-CityMind APIs should be:
+All successful responses use:
 
-* RESTful
-* Stateless
-* Predictable
-* Typed
-* Secure
-* Versionable
-* AI-friendly
+~~~json
+{
+  "success": true,
+  "data": {}
+}
+~~~
 
-Every endpoint must:
+All failures use:
 
-* Validate input.
-* Return structured output.
-* Handle failures gracefully.
-* Never expose internal implementation details.
+~~~json
+{
+  "success": false,
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "The request could not be validated.",
+    "details": []
+  }
+}
+~~~
 
----
+The client must render data only after checking success. Route handlers use Zod
+for request validation; service outputs are normalized and validated before
+they are returned or rendered.
 
-# Base URL
+Base URL in development and production:
 
-Development
-
-```text
+~~~
 /api
-```
-
-Future
-
-```text
-/api/v1
-```
-
----
-
-# API Architecture
-
-```text
-Client
-
-↓
-
-Next.js Route Handler
-
-↓
-
-Validation
-
-↓
-
-Business Service
-
-↓
-
-OpenAI / OSRM
-
-↓
-
-Response Formatter
-
-↓
-
-Client
-```
+~~~
 
 ---
 
 # Endpoint Overview
 
-| Endpoint | Method | Purpose                  |
-| -------- | ------ | ------------------------ |
-| /vision  | POST   | Analyze uploaded image   |
-| /reason  | POST   | Generate recommendations |
-| /chat    | POST   | Continue conversation    |
-| /map     | POST   | Route generation         |
-| /persona | POST   | Update reasoning context |
-| /health  | GET    | Health check             |
+| Endpoint | Method | Purpose |
+| --- | --- | --- |
+| /vision | POST | Analyze a selected image into a VisionScene. |
+| /reason | POST | Produce persona-aware recommendations and optional route context. |
+| /chat | POST | Continue the active, non-persistent conversation. |
+| /map | POST | Resolve a destination and prepare a walking route without AI reasoning. |
+| /persona | POST | Validate and return the selected persona profile. |
+| /health | GET | Report configured provider health at a high level. |
+
+---
+
+# Shared Types
+
+## Coordinates
+
+~~~json
+{
+  "latitude": 9.9674,
+  "longitude": 76.3183
+}
+~~~
+
+Latitude must be between -90 and 90; longitude must be between -180 and 180.
+
+## Persona IDs
+
+~~~
+daily-commuter | tourist | elderly | wheelchair | luggage
+~~~
+
+## Destination Input
+
+The client can provide an explicit coordinate target or a text target:
+
+~~~json
+{
+  "label": "Fort Kochi ferry",
+  "coordinates": {
+    "latitude": 9.9652,
+    "longitude": 76.2422
+  }
+}
+~~~
+
+label and coordinates are optional independently, but at least one is required
+when a destination object is supplied. destinationQuery is a separate trimmed
+string between 2 and 160 characters.
+
+## Destination Resolution
+
+Every route attempt returns a typed resolution object:
+
+~~~json
+{
+  "status": "resolved",
+  "destination": {
+    "label": "Fort Kochi ferry",
+    "coordinates": {
+      "latitude": 9.9652,
+      "longitude": 76.2422
+    },
+    "source": "mapbox-geocoding",
+    "query": "Fort Kochi ferry"
+  },
+  "query": "Fort Kochi ferry"
+}
+~~~
+
+status is one of resolved, missing, unavailable, or not-found. Explicit
+coordinates have priority. Otherwise CityMind evaluates destinationQuery, then a
+destination label, then a destination phrase safely extracted from the user
+prompt. Text is resolved through Mapbox Geocoding. If it cannot be resolved,
+CityMind returns the status and user-facing message; it never routes to a
+guessed coordinate.
+
+## Route Summary
+
+An available route is represented by RouteSummary, not a provider payload. It
+includes:
+
+* origin, destination, waypoints, and normalized coordinates;
+* GeoJSON LineString route geometry;
+* distance, duration, walking mode, and normalized steps;
+* source: mapbox, osrm, or fallback;
+* status: routed or estimated;
+* a separate accessibility object with verified, evidence, and warnings.
+
+accessible is retained for compatibility and is true only when trusted evidence
+verifies accessibility. A persona preference, a walking profile, or a
+Mapbox/OSRM response alone is not proof of elevators, ramps, curb cuts, surface
+conditions, or temporary closures.
 
 ---
 
@@ -106,62 +153,40 @@ Client
 
 ## Purpose
 
-Analyze uploaded image.
-
----
+Turn a camera capture or upload into a validated VisionScene.
 
 ## Request
 
-Content-Type
+Content type: multipart/form-data
 
-multipart/form-data
+| Field | Required | Contract |
+| --- | --- | --- |
+| image | Yes | An image file no larger than 5 MB. |
+| location | No | JSON-encoded Coordinates. |
 
----
+Images must use an image/* MIME type. Vector SVG demo assets are kept in a
+deterministic local path rather than sent to live vision; use a camera capture,
+JPEG, or PNG for live vision analysis.
 
-Fields
+## Successful data
 
-```json
-image
-```
-
-Optional
-
-```json
-location
-```
-
----
-
-## Processing
-
-* Validate image
-* Compress if required
-* Send to OpenAI Vision
-* Parse structured output
-
----
-
-## Success Response
-
-```json
+~~~json
 {
-  "success": true,
   "scene": {},
-  "visionSummary": {},
-  "confidence": 0.94
+  "visionSummary": {
+    "sceneType": "Metro station approach",
+    "summary": "...",
+    "landmarks": [],
+    "accessibility": []
+  },
+  "confidence": 0.82
 }
-```
+~~~
 
----
-
-## Error Response
-
-```json
-{
-  "success": false,
-  "message": "Unable to analyze image."
-}
-```
+scene contains scene type, summary, landmarks, infrastructure, accessibility
+observations, navigation cues, warnings, confidence, and optional location. A
+low-confidence or fallback observation is still structured and clearly warns the
+user to verify it.
 
 ---
 
@@ -169,81 +194,63 @@ location
 
 ## Purpose
 
-Generate AI recommendations.
-
----
+Combine a validated scene, persona, question, optional location, and optional
+destination into an explainable recommendation. This is the normal hero-flow
+endpoint.
 
 ## Request
 
-```json
+~~~json
 {
   "scene": {},
-  "persona": {},
-  "userPrompt": "",
-  "location": {}
+  "persona": "luggage",
+  "userPrompt": "What is the best route to the ferry?",
+  "location": {
+    "latitude": 9.9674,
+    "longitude": 76.3183
+  },
+  "destinationQuery": "Fort Kochi ferry",
+  "destination": {
+    "label": "Fort Kochi ferry"
+  }
 }
-```
+~~~
 
----
+scene, persona, and a non-empty userPrompt are required. location,
+destinationQuery, and destination are optional. Supplying a destination is
+recommended for a route but is not required for a useful recommendation.
 
 ## Processing
 
-* Build reasoning context
-* Load prompt
-* Execute reasoning
-* Parse structured response
+1. Normalize the vision scene and construct persona-aware reasoning context.
+2. Resolve the destination using the shared destination contract.
+3. Request Mapbox Directions for a walking route when a destination resolves.
+4. Retry with configured OSRM foot routing if Mapbox Directions cannot provide
+   a usable route.
+5. Use OpenAI structured reasoning when available; otherwise return the
+   deterministic fallback reasoning contract.
+6. Merge provider and route warnings without allowing AI output to replace
+   trusted route data.
 
----
+## Successful data
 
-## Success Response
-
-```json
+~~~json
 {
+  "scene": {},
+  "intent": "navigation",
+  "reasoning": "...",
   "recommendations": [],
-  "reasoning": "",
+  "destination": {},
+  "destinationResolution": {},
+  "route": {},
+  "nearbyPlaces": [],
   "warnings": [],
-  "nearbyPlaces": []
+  "confidence": 0.78
 }
-```
+~~~
 
----
-
-# POST /chat
-
-## Purpose
-
-Continue AI conversation.
-
----
-
-## Request
-
-```json
-{
-  "conversation": [],
-  "latestMessage": "",
-  "persona": {}
-}
-```
-
----
-
-## Processing
-
-Maintain conversational context.
-
-Generate follow-up answer.
-
----
-
-## Response
-
-```json
-{
-  "message": "",
-  "reasoning": ""
-}
-```
+route is null when no destination resolves. destinationResolution tells the UI
+why, so it can request a more specific place rather than showing a false route.
 
 ---
 
@@ -251,283 +258,175 @@ Generate follow-up answer.
 
 ## Purpose
 
-Generate optimized route.
-
----
+Resolve a destination and prepare route data independently of OpenAI. This
+supports clients that need a route update without another reasoning request.
 
 ## Request
 
-```json
+~~~json
 {
-  "origin": {},
-  "destination": {},
-  "persona": {}
+  "origin": {
+    "latitude": 9.9674,
+    "longitude": 76.3183
+  },
+  "destinationQuery": "Fort Kochi ferry",
+  "persona": "tourist"
 }
-```
+~~~
 
----
+origin and persona are required. At least one of destination or
+destinationQuery is required.
 
-## Processing
+## Successful data
 
-Call OSRM.
-
-Optimize route.
-
-Return route metadata.
-
----
-
-## Response
-
-```json
+~~~json
 {
   "route": {},
-  "distance": "",
-  "duration": ""
+  "destination": {},
+  "destinationResolution": {},
+  "distance": 1240,
+  "duration": 1020,
+  "warnings": []
 }
-```
+~~~
+
+When no route is available, route, destination, distance, and duration are
+null; destinationResolution and warnings remain available.
+
+---
+
+# POST /chat
+
+## Purpose
+
+Continue the current browser-session conversation using the active persona,
+scene, and recommendation when available. CityMind does not persist chat
+history in the MVP.
+
+## Request
+
+~~~json
+{
+  "conversation": [],
+  "latestMessage": "Can I avoid stairs?",
+  "persona": "wheelchair",
+  "scene": {},
+  "recommendation": {}
+}
+~~~
+
+conversation, latestMessage, and persona are required. scene and
+recommendation are optional but normally supplied by the active workflow.
+
+## Successful data
+
+~~~json
+{
+  "message": "...",
+  "reasoning": "...",
+  "suggestedQuestions": []
+}
+~~~
 
 ---
 
 # POST /persona
 
-## Purpose
+Validates a persona ID and returns its typed profile:
 
-Update active persona.
-
----
-
-## Request
-
-```json
+~~~json
 {
   "persona": "tourist"
 }
-```
+~~~
 
----
-
-## Response
-
-```json
+~~~json
 {
-  "success": true
+  "success": true,
+  "data": {
+    "persona": {}
+  }
 }
-```
+~~~
+
+The frontend updates persona locally and reruns the active reasoning context
+when a scene and prior question exist; this endpoint remains available for
+explicit API clients.
 
 ---
 
 # GET /health
 
-Purpose
+Returns a high-level readiness snapshot without exposing credentials:
 
-Simple health endpoint.
-
----
-
-Response
-
-```json
-{
-  "status": "healthy"
-}
-```
-
----
-
-# Validation Rules
-
-Every endpoint validates:
-
-* Required fields
-* Image size
-* Empty prompts
-* Unsupported personas
-* Invalid coordinates
-
-Use Zod for validation.
-
----
-
-# Error Codes
-
-| Status | Meaning                |
-| ------ | ---------------------- |
-| 200    | Success                |
-| 400    | Validation error       |
-| 401    | Unauthorized (future)  |
-| 404    | Resource not found     |
-| 429    | Rate limit exceeded    |
-| 500    | Internal server error  |
-| 503    | AI service unavailable |
-
----
-
-# Standard Error Format
-
-```json
-{
-  "success": false,
-  "error": {
-    "code": "",
-    "message": "",
-    "details": []
-  }
-}
-```
-
-Never return raw stack traces.
-
----
-
-# Standard Success Format
-
-```json
+~~~json
 {
   "success": true,
-  "data": {}
+  "data": {
+    "status": "healthy",
+    "services": {
+      "ai": "live",
+      "geocoding": "live",
+      "routing": "live"
+    }
+  }
 }
-```
+~~~
 
-Maintain consistent response envelopes.
-
-The standard success and error envelopes are authoritative for every endpoint.
-Endpoint-specific examples describe the shape inside `data`.
-
----
-
-# MVP Fallback Behavior
-
-If OpenAI, OSRM, or OpenStreetMap tiles are unavailable, API routes may return
-deterministic fallback data using the same success envelope and typed schemas.
-
-Fallback responses must:
-
-* Keep `success: true` only when a usable structured response is available.
-* Include warnings when data is simulated or unverified.
-* Never expose provider errors, stack traces, or credentials.
-* Continue using Zod validation before returning data to the client.
+status may be degraded when CityMind is using fallback capability or lacks a
+provider configuration. routing is live with Mapbox Directions, fallback when
+only an optional OSRM endpoint is configured, and unavailable when neither is
+available.
 
 ---
 
-# AI Request Lifecycle
+# Provider Failures, Timeouts, and Fallbacks
 
-```text
-Frontend
+The API is intentionally useful without every provider configured, but it does
+not misrepresent certainty.
 
-↓
+| Condition | API behavior |
+| --- | --- |
+| OpenAI missing, fails, or times out | Return a deterministic typed vision, reasoning, or chat fallback with warnings. |
+| Mapbox geocoding missing, fails, or finds no confident result | Return destinationResolution as unavailable or not-found; do not manufacture a route. |
+| Mapbox Directions fails after resolution | Try configured OSRM foot routing. |
+| OSRM also fails | Return an explicitly estimated fallback route with source fallback, status estimated, and verification warnings. |
+| Browser Mapbox GL fails | The API route remains valid; the client shows text directions and a local visual map fallback. |
 
-Validation
-
-↓
-
-Vision Service
-
-↓
-
-Context Builder
-
-↓
-
-Prompt Loader
-
-↓
-
-Reasoning Engine
-
-↓
-
-Structured Output
-
-↓
-
-Validation
-
-↓
-
-Frontend
-```
+The shared timeout helper aborts OpenAI vision, reasoning, and chat requests
+after 30 seconds. Mapbox geocoding/directions and OSRM routing are aborted after
+10 seconds.
 
 ---
 
-# Timeouts
+# Errors and Status Codes
 
-Vision
+| Status | Meaning |
+| --- | --- |
+| 200 | A typed success response, including a usable deterministic fallback. |
+| 400 | Zod validation failure or malformed request. |
+| 503 | The route handler could not produce a typed, recoverable response. |
 
-30 seconds
-
-Reasoning
-
-30 seconds
-
-Maps
-
-10 seconds
-
-If exceeded:
-
-Return graceful error.
+Expected provider unavailability normally becomes a documented typed fallback or
+resolution status rather than an opaque 5xx response. Error bodies never include
+stack traces, raw provider messages, tokens, or uploaded image data.
 
 ---
 
-# Security
+# Security and Privacy
 
-* Validate all inputs.
-* Limit image size.
-* Never expose API keys.
-* Reject malformed requests.
-* Sanitize prompt input where practical.
-
----
-
-# Future Endpoints
-
-Potential additions:
-
-* /voice
-* /weather
-* /history
-* /favorites
-* /memory
-* /feedback
-* /events
-* /alerts
-
-These are outside the MVP.
+* OpenAI and server-side Mapbox credentials remain server-only.
+* The browser uses only NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN, a Mapbox public token.
+* Uploaded images are processed in memory and are not persisted by the MVP.
+* Prompt and image inputs are treated as untrusted and validated before service
+  use where applicable.
+* API consumers should not treat route geometry as verified accessibility data.
 
 ---
 
-# API Versioning
+# Verification
 
-Future APIs should use:
-
-```text
-/api/v1
-```
-
-Breaking changes should never modify existing contracts directly.
-
----
-
-# API Checklist
-
-Every endpoint must satisfy:
-
-* Input validation
-* Typed request
-* Typed response
-* Error handling
-* Documentation
-* Logging
-* Structured output
-* No duplicated logic
-
----
-
-# Guiding Principle
-
-The API layer should be as thin as possible.
-
-Its job is to orchestrate services, validate data, and return predictable responses—not to contain complex business logic.
-
-Business logic belongs in the service layer, and AI reasoning belongs in the AI orchestration layer.
+Unit tests cover validators, response normalization, destination resolution,
+provider-result normalization, and fallback routes. The GitHub Actions quality
+workflow runs formatting, linting, typechecking, tests, and a production build
+for pull requests and pushes to main.

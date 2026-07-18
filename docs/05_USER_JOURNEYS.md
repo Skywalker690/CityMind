@@ -148,12 +148,12 @@ User captures Vyttila Metro Station.
 
 ↓
 
-AI responds:
+AI responds with evidence-aware guidance:
 
-* Use Entrance B.
-* Elevator available.
-* Exit through Gate 2.
-* Walking distance reduced by 150m.
+* Follow the best confirmed entrance or ask staff to verify it.
+* Confirm elevator or ramp availability before committing to the route.
+* Use visible signage to verify the correct exit.
+* See the route estimate and its verification warnings.
 * Here's why.
 
 ---
@@ -252,7 +252,7 @@ Recommendation
 
 ↓
 
-Map highlights accessible path
+Map highlights the candidate walking path and accessibility verification needs
 
 ---
 
@@ -327,7 +327,7 @@ Recommendation
 
 ↓
 
-Shortest accessible path
+Lowest-effort candidate path, pending on-site verification
 
 ↓
 

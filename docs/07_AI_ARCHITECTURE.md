@@ -191,7 +191,7 @@ Reason
 
 Entrance A is closer but requires stairs.
 
-Entrance B is farther but has elevator access and is better for luggage.
+Entrance B is farther; if trusted evidence confirms elevator access, it may be better for luggage.
 
 ---
 
@@ -226,7 +226,7 @@ Use Entrance B.
 
 Reason
 
-It minimizes walking while providing elevator access.
+It may minimize walking, subject to confirming elevator access on-site or from trusted data.
 
 Benefit
 

@@ -166,11 +166,11 @@ Example
 
 Recommendation
 
-Use Entrance B.
+Use Entrance B only if the available scene or trusted local information confirms it has step-free access.
 
 Reason
 
-It has elevator access and reduces walking distance.
+It may reduce walking effort, but elevator availability must be verified before travel.
 
 ---
 
@@ -324,15 +324,15 @@ Optional route button
 
 ### Best Entrance
 
-Entrance B
+Verify Entrance B
 
 Reason
 
-Elevator available.
+Confirm whether elevator access is currently available.
 
 Benefit
 
-Shortest accessible path.
+Avoids relying on an unverified stair-dependent path.
 
 ---
 

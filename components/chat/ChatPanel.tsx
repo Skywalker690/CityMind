@@ -38,7 +38,7 @@ export function ChatPanel({
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (!message.trim() || disabled) {
+    if (!message.trim() || disabled || loading) {
       return;
     }
 

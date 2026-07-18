@@ -47,22 +47,31 @@ Every folder should have one clear responsibility.
 ```text
 citymind/
 │
+├── .github/workflows/quality.yml
 ├── app/
 ├── components/
-├── services/
+├── docs/
 ├── hooks/
 ├── lib/
 ├── prompts/
-├── types/
 ├── public/
-├── docs/
+├── services/
+├── tests/
+├── types/
 ├── .env.example
 ├── README.md
 ├── next.config.ts
 ├── package.json
+├── pnpm-lock.yaml
+├── postcss.config.mjs
+├── tailwind.config.ts
 ├── tsconfig.json
-└── tailwind.config.ts
+└── vitest.config.ts
 ```
+
+CityMind uses the pinned pnpm lockfile for CI and the documented local install
+path. If a `package-lock.json` is present for tool compatibility, it does not
+replace the canonical pnpm workflow.
 
 ---
 
@@ -70,40 +79,37 @@ citymind/
 
 ## Purpose
 
-Contains the complete application routing.
+Contains the Next.js App Router shell, route handlers, and framework-level
+recovery UI.
 
-This follows the Next.js App Router architecture.
-
----
-
-Recommended Structure
+Implemented structure
 
 ```text
 app/
-
-layout.tsx
-
-page.tsx
-
-(camera)/
-
-chat/
-
-map/
-
-settings/
-
-api/
+├── api/
+│   ├── vision/route.ts
+│   ├── reason/route.ts
+│   ├── chat/route.ts
+│   ├── map/route.ts
+│   ├── persona/route.ts
+│   └── health/route.ts
+├── error.tsx
+├── globals.css
+├── layout.tsx
+├── loading.tsx
+└── page.tsx
 ```
 
----
+`page.tsx` composes the application shell. `error.tsx` is the route-segment
+error boundary and must offer recovery without exposing internal errors.
+`loading.tsx` provides the matching framework-level loading state. Route
+handlers validate input, delegate to services, and return shared API envelopes.
 
 Rules
 
-* No business logic.
 * No prompt definitions.
 * Keep pages thin.
-* Pages should orchestrate components only.
+* Do not put provider logic in route handlers.
 
 ---
 
@@ -117,35 +123,37 @@ Structure
 
 ```text
 components/
-
-camera/
-
-chat/
-
-map/
-
-cards/
-
-navigation/
-
-persona/
-
-common/
-
-ui/
+├── camera/CameraCard.tsx
+├── cards/
+│   ├── RecommendationCard.tsx
+│   ├── RecommendationPanel.tsx
+│   └── VisionSummary.tsx
+├── chat/ChatPanel.tsx
+├── common/
+│   ├── AnalysisSteps.tsx
+│   ├── EmptyState.tsx
+│   └── ErrorState.tsx
+├── layout/CityMindApp.tsx
+├── map/InteractiveMap.tsx
+├── persona/PersonaSelector.tsx
+└── ui/
 ```
 
 ---
 
 Responsibilities
 
-* Presentation only
-* Reusable
-* Stateless where possible
+* Presentation and accessible interaction forwarding
+* Reusable and typed
+* Local visual state where needed (for example, Mapbox lifecycle)
 
 ---
 
 Never place API logic here.
+
+`components/map/InteractiveMap.tsx` owns Mapbox GL lifecycle, markers, and
+GeoJSON rendering only. It receives the normalized `RouteSummary` from above;
+destination search and directions stay in `services/mapService.ts`.
 
 ---
 
@@ -155,20 +163,17 @@ Purpose
 
 Contains business logic.
 
-Example
+Implemented modules
 
 ```text
 services/
-
-vision.service.ts
-
-reasoning.service.ts
-
-map.service.ts
-
-location.service.ts
-
-prompt.service.ts
+├── chatService.ts
+├── fallbackData.ts
+├── mapService.ts
+├── openaiService.ts
+├── promptService.ts
+├── reasoningService.ts
+└── visionService.ts
 ```
 
 ---
@@ -179,6 +184,7 @@ Responsibilities
 * AI orchestration
 * Business rules
 * Response transformation
+* Provider fallback and timeout recovery
 
 ---
 
@@ -192,20 +198,13 @@ Purpose
 
 Reusable React hooks.
 
-Examples
+Implemented hooks
 
 ```text
 hooks/
-
-useCamera.ts
-
-useLocation.ts
-
-useChat.ts
-
-usePersona.ts
-
-useVision.ts
+├── useCamera.ts
+├── useCityMind.ts
+└── useLocation.ts
 ```
 
 ---
@@ -224,16 +223,14 @@ Structure
 
 ```text
 lib/
-
-utils.ts
-
-constants.ts
-
-config.ts
-
-logger.ts
-
-validators.ts
+├── api.ts
+├── config.ts
+├── constants.ts
+├── network.ts
+├── normalizers.ts
+├── personas.ts
+├── utils.ts
+└── validators.ts
 ```
 
 ---
@@ -261,16 +258,12 @@ Structure
 
 ```text
 prompts/
-
-system.md
-
-vision.md
-
-urban-reasoning.md
-
-persona.md
-
-formatter.md
+├── context.md
+├── formatter.md
+├── persona.md
+├── system.md
+├── urban-reasoning.md
+└── vision.md
 ```
 
 ---
@@ -294,18 +287,12 @@ Structure
 
 ```text
 types/
-
-vision.ts
-
-chat.ts
-
-map.ts
-
-recommendation.ts
-
-persona.ts
-
-api.ts
+├── api.ts
+├── chat.ts
+├── map.ts
+├── persona.ts
+├── recommendation.ts
+└── vision.ts
 ```
 
 ---
@@ -328,14 +315,7 @@ Examples
 
 ```text
 public/
-
-images/
-
-icons/
-
-illustrations/
-
-demo/
+└── demo/metro-station.svg
 ```
 
 ---
@@ -364,20 +344,25 @@ Documentation is treated as code.
 Allowed dependency direction
 
 ```text
-UI
-
-↓
-
-Hooks
-
-↓
-
-Services
-
-↓
-
-External APIs
+Feature components
+        |
+        v
+Client hooks and local UI state
+        |
+        v
+Next.js API route handlers
+        |
+        v
+Services and prompt loader
+        |
+        v
+OpenAI / Mapbox / OSRM
 ```
+
+`InteractiveMap` is the deliberate client-side exception: it dynamically loads
+Mapbox GL JS and uses only the public `NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN` to
+render a map. It does not call CityMind's server providers for geocoding or
+directions; those remain behind route handlers and `mapService.ts`.
 
 ---
 
@@ -417,7 +402,8 @@ Must NOT use
 
 * AI prompts
 * API keys
-* Environment variables
+* Server-only environment variables
+* Provider request logic
 
 ---
 
@@ -441,10 +427,13 @@ Must NOT use
 
 May use
 
-* Services
 * Types
+* Client-side API helpers
 
 Must NOT directly call OpenAI.
+
+`useCityMind` owns the client workflow state and calls CityMind's `/api/*`
+endpoints. It never imports server services or credentials.
 
 ---
 
@@ -492,7 +481,7 @@ visionService.ts
 
 ---
 
-Types
+Type exports
 
 PascalCase
 
@@ -570,6 +559,27 @@ Prompt updates should not require UI changes.
 
 ---
 
+# tests/ and CI
+
+`tests/` mirrors the modules it covers:
+
+```text
+tests/
+├── lib/
+│   ├── normalizers.test.ts
+│   └── validators.test.ts
+└── services/
+    ├── fallbackData.test.ts
+    └── mapService.test.ts
+```
+
+Keep provider calls mocked at this layer. Tests validate the shared contracts,
+destination resolution states, fallback honesty, and provider-result
+normalization without requiring live credentials. `.github/workflows/quality.yml`
+enforces formatting, linting, typechecking, tests, and a production build.
+
+---
+
 # Documentation Rules
 
 Whenever a folder structure changes:
@@ -596,8 +606,6 @@ analytics/
 voice/
 
 agents/
-
-tests/
 
 scripts/
 ```

@@ -65,7 +65,7 @@ Next.js API Routes
  │
  ├──────────────┐
  ▼              ▼
-OpenAI API   OSM / OSRM APIs
+OpenAI API   Mapbox / OSRM APIs
  │              │
  └──────┬───────┘
         ▼
@@ -138,14 +138,22 @@ Technology
 
 ## External Services
 
-### OpenStreetMap + OSRM
+### Mapbox + OSRM
 
 Responsibilities
 
-* Maps
-* Base map tiles
-* Route geometry
-* Route distance and duration
+* Mapbox GL JS renders the interactive browser map.
+* Mapbox Search Geocoding resolves a user-entered destination to coordinates.
+* Mapbox Directions provides the preferred walking-route geometry, distance,
+  duration, and turn steps.
+* A configured foot-profile OSRM endpoint is a secondary routing provider when
+  Mapbox Directions cannot return a usable route.
+* `services/mapService.ts` isolates provider payloads and exposes only shared
+  typed destination and route contracts to the rest of the app.
+
+Map rendering uses `NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN`; server-side destination
+geocoding uses `MAPBOX_ACCESS_TOKEN`. OSRM is configurable with
+`OSRM_BASE_URL` configures the optional secondary foot-routing provider.
 
 ---
 
@@ -288,6 +296,11 @@ Responsible for
 * Geocoding
 * Visualization
 
+The map layer does not infer accessibility from a persona. It exposes provider
+status, route status, and evidence separately so the UI can distinguish a
+routed walk from an estimated guide and verified accessibility from an
+unverified preference.
+
 ---
 
 # Data Flow
@@ -364,6 +377,31 @@ Conversation
 
 ---
 
+## Destination and Route Flow
+
+```text
+Destination coordinates, destinationQuery, or destination language in a prompt
+        |
+        v
+Typed destination resolution
+  resolved | missing | unavailable | not-found
+        |
+        +-- resolved --> Mapbox Directions walking --> OSRM secondary --> RouteSummary
+        |
+        +-- otherwise --> no fabricated route; actionable resolution message
+```
+
+Explicit coordinates win over a text query. A text query is resolved through
+Mapbox only when a server token is configured. `RouteSummary` carries the
+origin, destination, GeoJSON line, normalized route points, metrics, steps,
+provider source (`mapbox`, `osrm`, or `fallback`), status (`routed` or
+`estimated`), and
+accessibility evidence/warnings. The route always represents a walking route;
+it is never called step-free or accessible unless trusted evidence explicitly
+verifies that claim.
+
+---
+
 # Folder Responsibilities
 
 ```
@@ -426,6 +464,12 @@ The architecture should gracefully recover from:
 
 Users should always receive actionable feedback.
 
+All provider calls use `AbortController`-based timeouts. Vision, reasoning, and
+chat allow up to 30 seconds; Mapbox geocoding and routing allow up to 10
+seconds. The configured OSRM secondary route provider also has a 10-second
+limit. A timeout follows the same recovery policy as another provider failure,
+without leaking provider details to the user.
+
 ## MVP Fallback Mode
 
 The implemented MVP includes deterministic fallback behavior when external
@@ -433,15 +477,18 @@ credentials are missing or an external provider fails.
 
 Fallback behavior applies to:
 
-* OpenAI vision analysis
-* OpenAI urban reasoning
-* OpenAI chat follow-ups
-* OSRM route generation
-* Leaflet / OpenStreetMap map rendering
+* OpenAI vision analysis, urban reasoning, and chat follow-ups.
+* Mapbox Directions walking requests, followed by a configured foot-profile
+  OSRM endpoint when the primary route provider fails.
+* Mapbox GL browser rendering, where a local route visual preserves the rest of
+  the workflow.
 
-Fallback responses must still follow the same typed response contracts and must
-not invent confirmed infrastructure. They should clearly communicate uncertainty
-and guide the user toward verification.
+Fallback responses still follow the same typed response contracts and never
+invent confirmed infrastructure. If Mapbox cannot resolve a textual destination,
+CityMind returns the typed resolution status and does not create a route to a
+guessed location. If both live route providers fail after a destination
+resolves, the route is marked as an estimated fallback and its warnings make
+the limitation visible.
 
 ---
 
@@ -498,7 +545,7 @@ Vercel
 
 ├── OpenAI
 
-└── OpenStreetMap / OSRM
+└── Mapbox / OSRM
 ```
 
 Single deployment.

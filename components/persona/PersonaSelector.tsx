@@ -16,6 +16,7 @@ import type { PersonaId } from "@/types/persona";
 interface PersonaSelectorProps {
   value: PersonaId;
   onChange: (value: PersonaId) => void;
+  disabled?: boolean;
 }
 
 const iconByPersona = {
@@ -26,7 +27,11 @@ const iconByPersona = {
   luggage: Briefcase
 } satisfies Record<PersonaId, typeof Map>;
 
-export function PersonaSelector({ value, onChange }: PersonaSelectorProps) {
+export function PersonaSelector({
+  value,
+  onChange,
+  disabled = false
+}: PersonaSelectorProps) {
   return (
     <section aria-labelledby="persona-title" className="space-y-4">
       <div className="flex items-center justify-between gap-3">
@@ -49,9 +54,10 @@ export function PersonaSelector({ value, onChange }: PersonaSelectorProps) {
               key={persona.id}
               type="button"
               onClick={() => onChange(persona.id)}
+              disabled={disabled}
               aria-pressed={selected}
               className={cn(
-                "rounded-lg border bg-card p-3 text-left transition hover:border-primary/60 hover:shadow-soft",
+                "rounded-lg border bg-card p-3 text-left transition hover:border-primary/60 hover:shadow-soft disabled:cursor-not-allowed disabled:opacity-60",
                 selected
                   ? "border-primary bg-primary/5 ring-2 ring-primary/20"
                   : "border-border"

@@ -96,6 +96,7 @@ export function CameraCard({
           type: "image/jpeg"
         })
       );
+      camera.stopCamera();
     } catch (error) {
       setDemoError(
         error instanceof Error
@@ -228,19 +229,22 @@ export function CameraCard({
               Open Camera
             </Button>
           )}
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => inputRef.current?.click()}
-            disabled={Boolean(imagePreview)}
-          >
-            <ImageUp aria-hidden />
-            Upload
-          </Button>
-          <Button type="button" variant="secondary" onClick={handleDemoScene}>
-            <Sparkles aria-hidden />
-            Use Demo Scene
-          </Button>
+          {!imagePreview ? (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => inputRef.current?.click()}
+            >
+              <ImageUp aria-hidden />
+              Upload
+            </Button>
+          ) : null}
+          {!imagePreview ? (
+            <Button type="button" variant="secondary" onClick={handleDemoScene}>
+              <Sparkles aria-hidden />
+              Use Demo Scene
+            </Button>
+          ) : null}
           {camera.status === "ready" ? (
             <Button type="button" variant="ghost" onClick={camera.stopCamera}>
               <RotateCcw aria-hidden />

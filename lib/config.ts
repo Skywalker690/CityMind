@@ -5,9 +5,16 @@ export function getServerConfig() {
   return {
     openaiApiKey: getConfigValue("OPENAI_API_KEY"),
     openaiModel: getConfigValue("OPENAI_MODEL") ?? "gpt-4.1-mini",
-    mapboxAccessToken: getConfigValue("MAPBOX_ACCESS_TOKEN"),
-    osrmBaseUrl:
-      getConfigValue("OSRM_BASE_URL") ?? "https://router.project-osrm.org"
+    // A public Mapbox token is safe to use in the browser and can also power
+    // server-side Directions and Geocoding requests. Prefer the server-only
+    // name when both values are present.
+    mapboxAccessToken:
+      getConfigValue("MAPBOX_ACCESS_TOKEN") ??
+      getConfigValue("NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN"),
+    // OSRM is deliberately opt-in: a deployment must point this at a server
+    // configured with a walking/foot profile. The public demo server does not
+    // make that guarantee.
+    osrmBaseUrl: getConfigValue("OSRM_BASE_URL")
   };
 }
 
@@ -16,13 +23,17 @@ export function getServerHealth() {
   const services = {
     ai: config.openaiApiKey ? "live" : "fallback",
     geocoding: config.mapboxAccessToken ? "live" : "unavailable",
-    routing: config.osrmBaseUrl ? "configured" : "unavailable"
+    routing: config.mapboxAccessToken
+      ? "live"
+      : config.osrmBaseUrl
+        ? "fallback"
+        : "unavailable"
   } as const;
 
   const status =
     services.ai === "live" &&
     services.geocoding === "live" &&
-    services.routing === "configured"
+    services.routing !== "unavailable"
       ? "healthy"
       : "degraded";
 

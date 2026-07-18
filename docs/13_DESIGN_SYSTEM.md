@@ -99,7 +99,7 @@ Purpose
 
 * Success
 * Recommendations
-* Safe routes
+* Confirmed or live route state
 
 ---
 
@@ -137,7 +137,10 @@ Dark
 * Near Black
 * Dark Slate
 
-Both themes should be supported.
+Both themes are implemented with the shared CSS token set. The header theme
+toggle adds or removes the `dark` class on the document root for the current
+session; it is intentionally a low-friction local preference rather than a
+stored user account setting.
 
 ---
 
@@ -358,21 +361,14 @@ Not decoration.
 
 ---
 
-# Standard Animations
+# Implemented Motion
 
-Fade
+* A restrained fade-and-rise entrance for onboarding and guidance content.
+* Analysis steps and explicit workflow-status changes instead of decorative
+  motion.
+* Smooth focus scrolling only when the user has not requested reduced motion.
 
-Slide
-
-Scale
-
-Layout transitions
-
-Loading shimmer
-
-Typing indicator
-
-AI response reveal
+The global reduced-motion media query reduces animation and scrolling duration.
 
 ---
 
@@ -416,9 +412,12 @@ Comfortable spacing
 
 Clear sender distinction
 
-Streaming animation
+Visible sending state
 
-Markdown support (future)
+Multiline input and suggested prompts
+
+CityMind currently returns complete structured chat replies rather than token
+streaming. The sending state must never pretend that a response is streaming.
 
 ---
 
@@ -429,21 +428,31 @@ Camera should provide:
 * Live preview
 * Capture button
 * Upload option
+* Repeatable demo-scene option
+* Selected-image preview
+* Explicit "Confirm and analyze" action
 * Retake
 * Loading overlay
+
+Selecting an image is a review state, not permission to send it to AI. The
+confirmation affordance must remain visually dominant until analysis begins.
 
 ---
 
 # Map UI
 
-Map should display:
+Mapbox GL should display:
 
-* Current location
-* Route
-* Destination
-* Recommendation overlay
+* Current location and resolved destination markers
+* Walking-route GeoJSON and route status
+* Distance, duration, walking mode, and turn summary
+* Minimal navigation and recenter controls
+* An explicit accessibility-verification notice
 
-Map controls should remain minimal.
+Blue communicates a live routed walk; amber communicates an estimated fallback
+route. Neither color makes an accessibility claim. If Mapbox cannot initialize,
+the map panel must keep the route metrics and text instructions visible and
+replace the interactive canvas with an accessible local visual fallback.
 
 ---
 
@@ -451,10 +460,12 @@ Map controls should remain minimal.
 
 Every async component requires:
 
-* Skeleton
-* Spinner
-* Progress indicator
+* A visible loading surface or progress indicator
+* A success state
+* A recovery path when it fails
 
+The app shell uses a route-level skeleton, the camera shows analysis steps, the
+chat panel shows its sending state, and the map announces loading separately.
 Never leave blank space.
 
 ---
@@ -487,6 +498,10 @@ Provide recovery actions.
 
 Never expose technical details.
 
+Workflow errors use a reusable ErrorState with a retry action that preserves
+the right prior context. The framework-level error boundary uses the same calm
+language and offers both retry and return-home actions.
+
 ---
 
 # Accessibility
@@ -498,6 +513,11 @@ Support:
 * Screen readers
 * Focus indicators
 * Reduced motion preferences
+
+The interactive map has an accessible label and status messaging, while its
+route metrics and instructions remain available as a text alternative. Focus
+movement initiated by recommendation actions must land on the corresponding map
+or conversation section.
 
 Accessibility is mandatory.
 
@@ -523,13 +543,11 @@ The same experience should remain intuitive across devices.
 
 # Theme Support
 
-Support:
-
-Light Mode
-
-Dark Mode
-
-Both themes should maintain visual consistency.
+Light and dark modes share semantic CSS color tokens for backgrounds, cards,
+foregrounds, borders, focus rings, warnings, and recommendations. The visible
+header control has an explicit accessible label that describes the destination
+theme. The app starts in light mode and does not persist a preference across a
+full reload in the MVP.
 
 ---
 
