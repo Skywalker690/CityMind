@@ -1,4 +1,4 @@
-import { DEFAULT_DESTINATION } from "@/lib/constants";
+import { REASONING_REQUEST_TIMEOUT_MS } from "@/lib/constants";
 import { normalizeReasoningResult } from "@/lib/normalizers";
 import { getPersona } from "@/lib/personas";
 import { reasoningResultSchema } from "@/lib/validators";
@@ -6,7 +6,7 @@ import { createFallbackReasoning } from "@/services/fallbackData";
 import { generateRoute } from "@/services/mapService";
 import { hasOpenAIConfig, requestJsonFromOpenAI } from "@/services/openaiService";
 import { loadPrompts } from "@/services/promptService";
-import type { Coordinates } from "@/types/map";
+import type { Coordinates, DestinationInput } from "@/types/map";
 import type { PersonaId } from "@/types/persona";
 import type { ReasoningResult } from "@/types/recommendation";
 import type { VisionScene } from "@/types/vision";
@@ -58,7 +58,7 @@ const reasoningJsonSchema = {
         ]
       }
     },
-    route: { type: ["object", "null"] },
+    route: { type: "null" },
     nearbyPlaces: {
       type: "array",
       items: {
@@ -92,15 +92,29 @@ export async function generateReasoning(input: {
   persona: PersonaId;
   userPrompt: string;
   location?: Coordinates;
+  destinationQuery?: string;
+  destination?: DestinationInput;
 }): Promise<ReasoningResult> {
-  const route = await generateRoute({
+  const routeGeneration = await generateRoute({
     origin: input.location ?? input.scene.location,
-    destination: DEFAULT_DESTINATION,
+    destination: input.destination,
+    destinationQuery: input.destinationQuery,
+    userPrompt: input.userPrompt,
     persona: input.persona
   });
 
+  const createFallback = () =>
+    mergeRouteWarnings(
+      createFallbackReasoning(input, {
+        destination: routeGeneration.destination,
+        destinationResolution: routeGeneration.destinationResolution,
+        route: routeGeneration.route
+      }),
+      routeGeneration.warnings
+    );
+
   if (!hasOpenAIConfig()) {
-    return createFallbackReasoning(input);
+    return createFallback();
   }
 
   try {
@@ -117,7 +131,9 @@ export async function generateReasoning(input: {
       persona,
       userPrompt: input.userPrompt,
       location: input.location,
-      route
+      destination: routeGeneration.destination,
+      destinationResolution: routeGeneration.destinationResolution,
+      route: routeGeneration.route
     };
 
     const result = await requestJsonFromOpenAI({
@@ -149,14 +165,27 @@ export async function generateReasoning(input: {
         strict: true,
         schema: reasoningJsonSchema
       },
-      schema: reasoningResultSchema
+      schema: reasoningResultSchema,
+      timeoutMs: REASONING_REQUEST_TIMEOUT_MS
     });
 
-    return normalizeReasoningResult(result, input.scene, route);
+    return mergeRouteWarnings(
+      normalizeReasoningResult(result, input.scene, {
+        destination: routeGeneration.destination,
+        destinationResolution: routeGeneration.destinationResolution,
+        route: routeGeneration.route,
+        replaceRoute: true
+      }),
+      routeGeneration.warnings
+    );
   } catch {
-    return {
-      ...createFallbackReasoning(input),
-      route
-    };
+    return createFallback();
   }
+}
+
+function mergeRouteWarnings(result: ReasoningResult, routeWarnings: string[]) {
+  return {
+    ...result,
+    warnings: [...new Set([...result.warnings, ...routeWarnings])]
+  };
 }

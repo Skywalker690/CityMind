@@ -1,18 +1,33 @@
 "use client";
 
-import { Lightbulb, MessageSquareText } from "lucide-react";
+import {
+  ArrowUpRight,
+  Lightbulb,
+  MapPin,
+  MessageSquareText
+} from "lucide-react";
 
 import { EmptyState } from "@/components/common/EmptyState";
 import { RecommendationCard } from "@/components/cards/RecommendationCard";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import type { ReasoningResult } from "@/types/recommendation";
+import type {
+  NearbyPlace,
+  ReasoningResult,
+  Recommendation
+} from "@/types/recommendation";
 
 interface RecommendationPanelProps {
   result: ReasoningResult | null;
+  onRecommendationAction?: (recommendation: Recommendation) => void;
+  onNearbyPlaceSelect?: (place: NearbyPlace) => void;
 }
 
-export function RecommendationPanel({ result }: RecommendationPanelProps) {
+export function RecommendationPanel({
+  result,
+  onRecommendationAction,
+  onNearbyPlaceSelect
+}: RecommendationPanelProps) {
   if (!result) {
     return (
       <EmptyState
@@ -41,6 +56,7 @@ export function RecommendationPanel({ result }: RecommendationPanelProps) {
           <RecommendationCard
             key={recommendation.id}
             recommendation={recommendation}
+            onAction={onRecommendationAction}
           />
         ))}
       </div>
@@ -55,13 +71,58 @@ export function RecommendationPanel({ result }: RecommendationPanelProps) {
           <p className="text-sm leading-6 text-muted-foreground">{result.reasoning}</p>
           {result.warnings.length ? (
             <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-100">
-              {result.warnings.map((warning) => (
-                <p key={warning}>{warning}</p>
-              ))}
+              <p className="font-medium">Verify before you go</p>
+              <ul className="mt-2 space-y-1">
+                {result.warnings.map((warning) => (
+                  <li key={warning}>{warning}</li>
+                ))}
+              </ul>
             </div>
           ) : null}
         </CardContent>
       </Card>
+      {result.nearbyPlaces.length ? (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <MapPin className="size-4 text-primary" aria-hidden />
+              Nearby places to consider
+            </CardTitle>
+            <p className="text-sm text-muted-foreground">
+              These suggestions are contextual starting points—ask CityMind before relying on them.
+            </p>
+          </CardHeader>
+          <CardContent>
+            <ul className="space-y-3">
+              {result.nearbyPlaces.map((place) => (
+                <li
+                  key={`${place.name}-${place.type}`}
+                  className="flex flex-col gap-3 rounded-md border bg-background/70 p-3 sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <div className="min-w-0">
+                    <p className="font-medium">{place.name}</p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {place.type} / {place.reason}
+                    </p>
+                  </div>
+                  {onNearbyPlaceSelect ? (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="shrink-0 self-start sm:self-auto"
+                      onClick={() => onNearbyPlaceSelect(place)}
+                    >
+                      Ask CityMind
+                      <ArrowUpRight aria-hidden />
+                    </Button>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      ) : null}
     </section>
   );
 }

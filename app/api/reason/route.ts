@@ -15,7 +15,9 @@ export async function POST(request: Request) {
       scene,
       persona: payload.persona,
       userPrompt: payload.userPrompt,
-      location: payload.location
+      location: payload.location,
+      destinationQuery: payload.destinationQuery,
+      destination: payload.destination
     });
 
     return apiSuccess(result);
