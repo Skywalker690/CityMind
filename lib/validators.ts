@@ -46,15 +46,7 @@ export const visionSceneSchema = z.object({
   landmarks: z.array(
     z.object({
       name: z.string().min(1),
-      type: z.enum([
-        "station",
-        "entrance",
-        "signage",
-        "building",
-        "road",
-        "service",
-        "unknown"
-      ]),
+      type: z.enum(["station", "entrance", "signage", "building", "road", "service", "unknown"]),
       confidence: confidenceLevelSchema
     })
   ),
@@ -180,20 +172,22 @@ export const chatRequestSchema = z.object({
   recommendation: reasoningResultSchema.optional()
 });
 
-export const mapRequestSchema = z.object({
-  origin: coordinatesSchema,
-  destination: z.union([coordinatesSchema, destinationInputSchema]).optional(),
-  destinationQuery: destinationQuerySchema.optional(),
-  persona: personaIdSchema
-}).superRefine((payload, context) => {
-  if (!payload.destination && !payload.destinationQuery) {
-    context.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ["destination"],
-      message: "Provide destination coordinates or a destination query."
-    });
-  }
-});
+export const mapRequestSchema = z
+  .object({
+    origin: coordinatesSchema,
+    destination: z.union([coordinatesSchema, destinationInputSchema]).optional(),
+    destinationQuery: destinationQuerySchema.optional(),
+    persona: personaIdSchema
+  })
+  .superRefine((payload, context) => {
+    if (!payload.destination && !payload.destinationQuery) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["destination"],
+        message: "Provide destination coordinates or a destination query."
+      });
+    }
+  });
 
 export const personaRequestSchema = z.object({
   persona: personaIdSchema

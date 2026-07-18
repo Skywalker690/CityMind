@@ -13,12 +13,7 @@ export function apiSuccess<T>(data: T, status = 200) {
   );
 }
 
-export function apiError(
-  code: string,
-  message: string,
-  status = 500,
-  details?: unknown[]
-) {
+export function apiError(code: string, message: string, status = 500, details?: unknown[]) {
   return NextResponse.json<ApiFailure>(
     {
       success: false,
@@ -33,12 +28,7 @@ export function apiError(
 }
 
 export function validationError(error: ZodError) {
-  return apiError(
-    "VALIDATION_ERROR",
-    "The request could not be validated.",
-    400,
-    error.issues
-  );
+  return apiError("VALIDATION_ERROR", "The request could not be validated.", 400, error.issues);
 }
 
 export function getErrorMessage(error: unknown) {

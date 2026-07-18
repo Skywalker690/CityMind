@@ -1,3 +1,8 @@
+import {
+  DEFAULT_DESTINATION,
+  DEFAULT_LOCATION,
+  DEMO_DESTINATION_LABEL
+} from "@/lib/constants";
 import { getPersona } from "@/lib/personas";
 import type {
   Coordinates,
@@ -64,11 +69,113 @@ export function createFallbackScene(location?: Coordinates): VisionScene {
   };
 }
 
-export function createFallbackRoute(input: {
+type CreateFallbackRouteInput = {
   origin: Coordinates;
   destination: Destination;
   reason: string;
-}): RouteSummary {
+};
+
+export function createFallbackRoute(
+  input: CreateFallbackRouteInput
+): RouteSummary;
+export function createFallbackRoute(
+  origin?: Coordinates,
+  destination?: Coordinates,
+  persona?: PersonaId
+): RouteSummary;
+export function createFallbackRoute(
+  inputOrOrigin: CreateFallbackRouteInput | Coordinates = DEFAULT_LOCATION,
+  destination: Coordinates = DEFAULT_DESTINATION,
+  persona: PersonaId = "tourist"
+): RouteSummary {
+  if (isCreateFallbackRouteInput(inputOrOrigin)) {
+    return createEstimatedFallbackRoute(inputOrOrigin);
+  }
+
+  const accessible =
+    persona === "wheelchair" || persona === "elderly" || persona === "luggage";
+  const origin = inputOrOrigin;
+  const waypoint = {
+    label: accessible ? "Step-free station access" : "Station concourse",
+    coordinates: {
+      latitude: (origin.latitude + destination.latitude) / 2,
+      longitude: (origin.longitude + destination.longitude) / 2
+    },
+    type: "waypoint" as const
+  };
+
+  return {
+    origin: {
+      label: "Current location",
+      coordinates: origin,
+      type: "origin"
+    },
+    destination: {
+      label: DEMO_DESTINATION_LABEL,
+      coordinates: destination,
+      type: "destination"
+    },
+    waypoints: [waypoint],
+    distanceMeters: accessible ? 780 : 620,
+    durationSeconds: accessible ? 720 : 540,
+    accessible,
+    travelMode: "walking",
+    source: "fallback",
+    status: "estimated",
+    accessibility: {
+      status: accessible ? "unverified" : "unknown",
+      verified: false,
+      evidence: accessible
+        ? [
+            "Fallback route prioritizes a step-free waypoint for this persona.",
+            "No live accessibility data source has verified ramps or elevators."
+          ]
+        : [],
+      warnings: [
+        "Confirm elevators, ramps, and temporary closures before relying on this route."
+      ]
+    },
+    geometry: [
+      origin,
+      {
+        latitude: (origin.latitude * 2 + destination.latitude) / 3,
+        longitude: (origin.longitude * 2 + destination.longitude) / 3
+      },
+      {
+        latitude: (origin.latitude + destination.latitude * 2) / 3,
+        longitude: (origin.longitude + destination.longitude * 2) / 3
+      },
+      destination
+    ],
+    geometryGeoJson: {
+      type: "LineString",
+      coordinates: [
+        [origin.longitude, origin.latitude],
+        [
+          (origin.longitude * 2 + destination.longitude) / 3,
+          (origin.latitude * 2 + destination.latitude) / 3
+        ],
+        [
+          (origin.longitude + destination.longitude * 2) / 3,
+          (origin.latitude + destination.latitude * 2) / 3
+        ],
+        [destination.longitude, destination.latitude]
+      ]
+    },
+    steps: [
+      {
+        instruction: `Follow signage toward ${DEMO_DESTINATION_LABEL} and verify each turn with local wayfinding.`,
+        distanceMeters: accessible ? 780 : 620,
+        durationSeconds: accessible ? 720 : 540
+      }
+    ],
+    warnings: [
+      "Route is estimated from fallback geometry because live routing is unavailable."
+    ]
+  };
+}
+
+function createEstimatedFallbackRoute(input: CreateFallbackRouteInput): RouteSummary {
   const directDistance = calculateDistanceMeters(
     input.origin,
     input.destination.coordinates
@@ -248,6 +355,22 @@ export function createFallbackReasoning(
   } = {}
 ): ReasoningResult {
   const resolutionWarning = context.destinationResolution?.message;
+  const fallbackDestination: Destination =
+    context.destination ?? {
+      label: DEMO_DESTINATION_LABEL,
+      coordinates: DEFAULT_DESTINATION,
+      source: "explicit-coordinates"
+    };
+  const fallbackOrigin =
+    input.location ?? input.scene.location ?? DEFAULT_LOCATION;
+  const fallbackRoute =
+    context.route ??
+    createFallbackRoute({
+      origin: fallbackOrigin,
+      destination: fallbackDestination,
+      reason:
+        "Live walking directions are unavailable, so CityMind generated an estimated guide."
+    });
 
   return {
     scene: input.scene,
@@ -257,7 +380,7 @@ export function createFallbackReasoning(
     recommendations: [recommendationForPersona(input.persona, context.destination)],
     destination: context.destination,
     destinationResolution: context.destinationResolution,
-    route: context.route,
+    route: fallbackRoute,
     nearbyPlaces: [],
     warnings: [
       "CityMind is using fallback reasoning because live AI or routing data is unavailable.",
@@ -265,6 +388,12 @@ export function createFallbackReasoning(
     ],
     confidence: context.destination && context.route?.status === "routed" ? 0.68 : 0.58
   };
+}
+
+function isCreateFallbackRouteInput(
+  value: CreateFallbackRouteInput | Coordinates
+): value is CreateFallbackRouteInput {
+  return "origin" in value && "destination" in value && "reason" in value;
 }
 
 function calculateDistanceMeters(origin: Coordinates, destination: Coordinates) {

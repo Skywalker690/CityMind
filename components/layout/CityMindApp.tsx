@@ -35,7 +35,6 @@ export function CityMindApp() {
   const cityMind = useCityMind();
   const persona = getPersona(cityMind.persona);
   const reduceMotion = useReducedMotion();
-  const [destinationQuery, setDestinationQuery] = useState("");
   const [theme, setTheme] = useState<ThemeMode>("light");
   const [actionNotice, setActionNotice] = useState("");
   const busy =
@@ -74,16 +73,16 @@ export function CityMindApp() {
       message,
       cityMind.persona,
       true,
-      destinationQuery
+      cityMind.lastDestinationQuery
     );
   };
 
   const handleRouteRequest = () => {
-    const destination = destinationQuery.trim();
+    const destination = cityMind.lastDestinationQuery.trim();
 
     if (!destination) {
       setActionNotice("Add a destination to prepare a route recommendation.");
-      document.getElementById("destination-query")?.focus();
+      document.getElementById("destination-query-panel")?.focus();
       return;
     }
 
@@ -298,9 +297,9 @@ export function CityMindApp() {
                 }}
               >
                 <Input
-                  id="destination-query"
-                  value={destinationQuery}
-                  onChange={(event) => setDestinationQuery(event.target.value)}
+                  id="destination-query-panel"
+                  value={cityMind.lastDestinationQuery}
+                  onChange={(event) => cityMind.setDestinationQuery(event.target.value)}
                   placeholder="e.g. Fort Kochi ferry"
                   aria-describedby="destination-help"
                   autoComplete="off"
@@ -361,8 +360,10 @@ export function CityMindApp() {
             <ChatPanel
               messages={cityMind.chatMessages}
               suggestedPrompts={cityMind.suggestedPrompts}
+              destinationQuery={cityMind.lastDestinationQuery}
               disabled={!canAsk}
               loading={cityMind.status === "chatting" || cityMind.status === "reasoning"}
+              onDestinationChange={cityMind.setDestinationQuery}
               onSend={handlePrompt}
               onPromptSelect={handlePrompt}
             />

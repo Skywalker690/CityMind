@@ -56,14 +56,16 @@ describe("map service", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
 
-    const route = await generateRoute({
+    const result = await generateRoute({
       origin,
       destination,
       persona: "tourist"
     });
 
     expect(fetchMock).toHaveBeenCalledOnce();
-    expect(routeSummarySchema.parse(route)).toEqual(route);
+    expect(result.destinationResolution.status).toBe("resolved");
+    expect(result.route).toBeDefined();
+    const route = routeSummarySchema.parse(result.route);
     expect(route.geometry).toEqual([
       { latitude: 9.9674, longitude: 76.3183 },
       { latitude: 9.9652, longitude: 76.2422 }
@@ -85,14 +87,15 @@ describe("map service", () => {
   it("returns a usable fallback route when the provider is unavailable", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false }));
 
-    const route = await generateRoute({
+    const result = await generateRoute({
       origin,
       destination,
       persona: "elderly"
     });
 
-    expect(routeSummarySchema.safeParse(route).success).toBe(true);
-    expect(route.origin.coordinates).toEqual(origin);
-    expect(route.destination.coordinates).toEqual(destination);
+    expect(result.destinationResolution.status).toBe("resolved");
+    expect(routeSummarySchema.safeParse(result.route).success).toBe(true);
+    expect(result.route?.origin.coordinates).toEqual(origin);
+    expect(result.route?.destination.coordinates).toEqual(destination);
   });
 });

@@ -15,13 +15,7 @@ const coordinates = {
 
 describe("request validators", () => {
   it("accepts every supported persona and rejects unsupported values", () => {
-    const supportedPersonas = [
-      "daily-commuter",
-      "tourist",
-      "elderly",
-      "wheelchair",
-      "luggage"
-    ];
+    const supportedPersonas = ["daily-commuter", "tourist", "elderly", "wheelchair", "luggage"];
 
     for (const persona of supportedPersonas) {
       expect(personaIdSchema.safeParse(persona).success).toBe(true);
@@ -32,12 +26,12 @@ describe("request validators", () => {
 
   it("enforces geographic coordinate bounds", () => {
     expect(coordinatesSchema.parse(coordinates)).toEqual(coordinates);
-    expect(
-      coordinatesSchema.safeParse({ latitude: 90.01, longitude: 76.3183 }).success
-    ).toBe(false);
-    expect(
-      coordinatesSchema.safeParse({ latitude: 9.9674, longitude: -180.01 }).success
-    ).toBe(false);
+    expect(coordinatesSchema.safeParse({ latitude: 90.01, longitude: 76.3183 }).success).toBe(
+      false
+    );
+    expect(coordinatesSchema.safeParse({ latitude: 9.9674, longitude: -180.01 }).success).toBe(
+      false
+    );
   });
 
   it("trims a valid reasoning prompt and rejects an empty one", () => {

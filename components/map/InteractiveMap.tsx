@@ -5,12 +5,7 @@ import { LocateFixed, MapPinned, Route as RouteIcon } from "lucide-react";
 import type { Layer, Map as LeafletMap } from "leaflet";
 
 import { Badge } from "@/components/ui/badge";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatDistance, formatDuration } from "@/lib/utils";
 import type { Coordinates, RouteSummary } from "@/types/map";
 
@@ -100,18 +95,14 @@ export function InteractiveMap({ route, location }: InteractiveMapProps) {
 
     async function updateRoute() {
       const L = (await import("leaflet")).default;
-      const coordinates = currentRoute.geometry.map((point) => [
-        point.latitude,
-        point.longitude
-      ] as [number, number]);
+      const coordinates = currentRoute.geometry.map(
+        (point) => [point.latitude, point.longitude] as [number, number]
+      );
 
       routeLayersRef.current.forEach((layer) => layer.remove());
 
       const originMarker = L.marker(
-        [
-          currentRoute.origin.coordinates.latitude,
-          currentRoute.origin.coordinates.longitude
-        ],
+        [currentRoute.origin.coordinates.latitude, currentRoute.origin.coordinates.longitude],
         {
           icon: L.divIcon({
             className: "",
@@ -197,10 +188,7 @@ export function InteractiveMap({ route, location }: InteractiveMapProps) {
             label="Duration"
             value={route ? formatDuration(route.durationSeconds) : "Pending"}
           />
-          <RouteMetric
-            label="Mode"
-            value={route?.accessible ? "Step-aware" : "Urban route"}
-          />
+          <RouteMetric label="Mode" value={route?.accessible ? "Step-aware" : "Urban route"} />
         </div>
         {route?.steps.length ? (
           <div className="space-y-2">
@@ -255,8 +243,7 @@ function MapFallback({ route }: { route?: RouteSummary | null }) {
           {route ? "Route prepared" : "Waiting for recommendation"}
         </div>
         <p className="mt-1 text-muted-foreground">
-          Browser map rendering failed, so CityMind is showing the local route
-          fallback.
+          Browser map rendering failed, so CityMind is showing the local route fallback.
         </p>
       </div>
     </div>

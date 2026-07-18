@@ -282,6 +282,10 @@ Prompt Suggestions
 
 ↓
 
+Optional Destination Context
+
+↓
+
 Input
 
 ↓
@@ -289,6 +293,10 @@ Input
 Send Button
 
 Context must persist throughout the session.
+
+Destination context is entered before the first recommendation. Once a
+recommendation conversation starts, the destination field becomes read-only so
+route reasoning remains tied to a stable scene and user intent.
 
 ---
 

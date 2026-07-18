@@ -11,11 +11,7 @@ export async function fetchWithTimeout(
   timeoutMs: number,
   operation: string
 ) {
-  return withTimeout(
-    (signal) => fetch(input, { ...init, signal }),
-    timeoutMs,
-    operation
-  );
+  return withTimeout((signal) => fetch(input, { ...init, signal }), timeoutMs, operation);
 }
 
 export async function withTimeout<T>(

@@ -2,15 +2,7 @@
 
 import { ChangeEvent, useRef, useState } from "react";
 import Image from "next/image";
-import {
-  Camera,
-  Check,
-  ImageUp,
-  RotateCcw,
-  ScanLine,
-  Sparkles,
-  X
-} from "lucide-react";
+import { Camera, Check, ImageUp, RotateCcw, ScanLine, Sparkles, X } from "lucide-react";
 
 import { AnalysisSteps } from "@/components/common/AnalysisSteps";
 import { Button } from "@/components/ui/button";
@@ -184,9 +176,7 @@ export function CameraCard({
         </div>
 
         {camera.error || demoError ? (
-          <p className="text-sm text-amber-600 dark:text-amber-300">
-            {camera.error ?? demoError}
-          </p>
+          <p className="text-sm text-amber-600 dark:text-amber-300">{camera.error ?? demoError}</p>
         ) : null}
 
         <div className="flex flex-wrap gap-3">
@@ -198,12 +188,7 @@ export function CameraCard({
                   Confirm and analyze
                 </Button>
               ) : null}
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleRetake}
-                disabled={analyzing}
-              >
+              <Button type="button" variant="outline" onClick={handleRetake} disabled={analyzing}>
                 <RotateCcw aria-hidden />
                 Retake
               </Button>

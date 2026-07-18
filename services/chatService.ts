@@ -51,9 +51,7 @@ export async function continueConversation(input: {
   try {
     const prompts = await loadPrompts(["system", "context", "persona", "formatter"]);
     return requestJsonFromOpenAI({
-      system: [prompts.system, prompts.context, prompts.persona, prompts.formatter].join(
-        "\n\n"
-      ),
+      system: [prompts.system, prompts.context, prompts.persona, prompts.formatter].join("\n\n"),
       input: [
         {
           role: "user",

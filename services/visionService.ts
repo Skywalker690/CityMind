@@ -21,15 +21,7 @@ const visionJsonSchema = {
           name: { type: "string" },
           type: {
             type: "string",
-            enum: [
-              "station",
-              "entrance",
-              "signage",
-              "building",
-              "road",
-              "service",
-              "unknown"
-            ]
+            enum: ["station", "entrance", "signage", "building", "road", "service", "unknown"]
           },
           confidence: { type: "string", enum: ["low", "medium", "high"] }
         },
