@@ -1,9 +1,4 @@
-import type {
-  Coordinates,
-  Destination,
-  DestinationResolution,
-  RouteSummary
-} from "@/types/map";
+import type { Coordinates, Destination, DestinationResolution, RouteSummary } from "@/types/map";
 import type { ReasoningResult } from "@/types/recommendation";
 import type { VisionScene } from "@/types/vision";
 
@@ -37,16 +32,13 @@ export function normalizeReasoningResult(
   enrichment?: ReasoningEnrichment
 ): ReasoningResult {
   const destination = enrichment?.destination ?? result.destination;
-  const destinationResolution =
-    enrichment?.destinationResolution ?? result.destinationResolution;
+  const destinationResolution = enrichment?.destinationResolution ?? result.destinationResolution;
 
   return {
     ...result,
     scene: result.scene ? normalizeVisionScene(result.scene) : fallbackScene,
     destination: destination ?? undefined,
     destinationResolution: destinationResolution ?? undefined,
-    route: enrichment?.replaceRoute
-      ? enrichment.route
-      : result.route ?? enrichment?.route
+    route: enrichment?.replaceRoute ? enrichment.route : (result.route ?? enrichment?.route)
   };
 }

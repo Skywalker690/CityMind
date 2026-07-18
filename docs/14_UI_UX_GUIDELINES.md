@@ -2,18 +2,18 @@
 
 **Project:** CityMind
 
-**Version:** 1.1
+**Version:** 1.2
 
-**Status:** Implemented MVP Experience Contract
+**Status:** Implemented Staged Experience Contract
 
 ---
 
 # Purpose
 
 This document describes the CityMind MVP as users experience it. It is the
-frontend contract for the vision-first workflow, including its onboarding,
-photo confirmation, route honesty, map fallback, recovery, and accessibility
-behavior.
+frontend contract for the staged vision-first workflow, its tactile visual
+language, photo confirmation, route honesty, map fallback, recovery, and
+accessibility behavior.
 
 ---
 
@@ -21,43 +21,46 @@ behavior.
 
 CityMind should feel:
 
-* Calm, premium, and purposeful.
-* Vision-first rather than form-first.
-* Clear about what is known, estimated, and unverified.
-* Personal without requiring an account.
-* Fast to understand and forgiving when a provider is unavailable.
+- Calm, premium, and purposeful.
+- Vision-first rather than form-first.
+- Clear about what is known, estimated, and unverified.
+- Personal without requiring an account.
+- Focused: one required decision at a time.
+- Tactile, but never dependent on visual depth alone.
 
-Every screen has one primary next action. The app never asks users to interpret
-raw AI output or a provider error.
+Every visible stage has one primary next action. The app never asks users to
+interpret raw AI output, a provider error, or a dense dashboard with unrelated
+actions competing for attention.
 
 ---
 
 # Navigation Model
 
-CityMind is a single responsive workspace, not a multi-page onboarding funnel.
+CityMind uses one responsive application route with a controlled four-stage
+workspace. It is not a separate onboarding funnel and it is not a single page
+where all feature panels remain visible simultaneously.
 
-~~~text
-Open CityMind
-      |
-      v
-Inline onboarding and photo capture
-      |
-      v
-Review and confirm the selected photo
-      |
-      v
-Scene understanding
-      |
-      v
-Ask a question and optionally add a destination
-      |
-      v
-Recommendation, route context, map, and follow-up chat
-~~~
+```text
+Capture -> Confirm -> Ask -> Act
+```
 
-The inline onboarding appears only before an image or scene exists. Its primary
-action scrolls and focuses the capture workflow. There is no separate landing,
-settings, or account screen in the MVP.
+| Stage   | Primary user action | Main content                                        | Unlock condition      |
+| ------- | ------------------- | --------------------------------------------------- | --------------------- |
+| Capture | Select a scene.     | Camera, upload, or demo input; image review.        | Image selected.       |
+| Confirm | Approve analysis.   | Photo review, persona, optional location, progress. | Scene understood.     |
+| Ask     | Request guidance.   | Scene summary, question, optional destination.      | Recommendation ready. |
+| Act     | Inspect and refine. | Recommendation, route context, map, follow-up chat. | Result exists.        |
+
+The step rail is always visible in the application shell. The active step is
+announced as the current step. Future steps remain disabled until their required
+context exists; current and completed steps remain available so a user can
+correct a photo or context choice. Successful provider work automatically moves
+the user to the next meaningful stage.
+
+Returning to an earlier stage does not discard progress unless the user makes a
+change that logically invalidates it, such as replacing the image. The rail must
+not allow a user to skip the required confirmation or ask for guidance without a
+scene.
 
 ---
 
@@ -67,147 +70,166 @@ settings, or account screen in the MVP.
 
 The header contains:
 
-* CityMind identity and concise product explanation.
-* Workflow-status badge.
-* Optional location request with clear granted/loading/denied states.
-* A keyboard-accessible light/dark theme toggle.
+- CityMind identity and concise product explanation.
+- Workflow-status badge.
+- Location-status indicator.
+- Keyboard-accessible light/dark theme toggle.
 
-The header must not hide the primary action behind navigation. The theme applies
-immediately for the current page session and is not a persisted account
-preference.
+Location is requested in Confirm, not from a competing header action. The first
+visit follows the operating-system theme when available; a manual choice is
+stored locally in the browser and restored on subsequent visits.
 
 ## Main Layout
 
-Desktop uses a three-column workspace:
+Desktop layout:
 
-~~~text
-Persona + camera | guidance and destination | map + conversation
-~~~
+```text
+Step rail | One active stage workspace
+```
 
-On smaller viewports, panels stack in workflow order. The mobile sequence is:
+The step rail can remain sticky as a desktop enhancement. The active workspace
+is the visual focus and contains one stage at a time. On tablet and mobile, the
+rail stacks above the workspace; it may use a compact grid but preserves the
+same labels, ordering, and unavailable states.
 
-~~~text
-Onboarding -> persona -> camera -> destination -> guidance -> map -> chat
-~~~
-
-Sticky side panels are a desktop enhancement only; no important information is
-hidden when they unstick on tablet or mobile.
+No critical action may be hidden because a desktop rail is sticky, and no
+important content may be placed below an oversized map.
 
 ---
 
-# Hero Flow
+# Stage Specifications
 
-## 1. Choose Context
+## 1. Capture
 
-Persona chips expose Tourist, Daily Commuter, Elderly, Wheelchair User, and
-Luggage Traveler. The selected state is visible and announced with native
-button semantics. Persona controls are disabled while CityMind is processing.
+Capture is the entry point. It supports:
 
-If a scene and prior question already exist, changing persona reruns the same
-reasoning context. It does not require another photo upload.
+- Opening and stopping the browser camera.
+- Capturing a camera frame.
+- Uploading an existing image.
+- Loading a repeatable local demo scene.
+- Replacing or discarding a selected photo.
 
-## 2. Capture or Upload a Scene
+Before selection, the camera/upload surface explains that CityMind needs a view
+of the relevant entrance, path, sign, or street decision. After selection, an
+inset image review surface and a prominent **Continue to confirm** action make
+the next step clear. The user can replace the photo at this point.
 
-The camera card supports:
+Image selection alone never sends content to AI.
 
-* Opening and stopping the browser camera.
-* Capturing a camera frame.
-* Uploading an image.
-* Loading a repeatable local demo scene.
-* Retaking, replacing, or discarding a photo.
+## 2. Confirm
 
-The UI must explain camera permission failure and keep upload available as an
-alternative.
+Confirm is the informed decision to analyze the selected scene. It includes:
 
-## 3. Review Before Analysis
+- The selected image and guidance to check that the relevant context is visible.
+- Persona choices: Tourist, Daily Commuter, Elderly Companion, Wheelchair User,
+  and Luggage Traveler.
+- Optional device-location request and a clear granted, loading, denied, or
+  unavailable state.
+- A clearly dominant **Analyze this scene** action.
+- Return to Capture to change the image before analysis begins.
 
-After selection, CityMind shows the image preview and an explicit Confirm and
-analyze action. AI analysis does not begin on image selection alone. The
-preview guidance asks users to check that the relevant entrance, signs, or path
-are visible.
+Analysis overlays non-technical progress on the preview and exposes analysis
+steps. While it is active, duplicate and conflicting controls are disabled.
+Successful analysis automatically opens Ask.
 
-Retake and choose-another actions remain available until analysis starts. While
-analysis is active, the preview receives a non-technical progress overlay and
-the analysis steps communicate what CityMind is doing.
+Changing a persona after a previous question exists reruns that saved question
+with the new mobility context. This gives users a direct comparison without
+requiring a second photo, while retaining route and accessibility uncertainty.
 
-## 4. Understand the Scene
+## 3. Ask
 
-When vision completes, the scene summary appears alongside a clear
-scene-understood status. Suggested prompts change from generic ideas to
-contextual follow-ups. Low confidence and fallback observations are shown as
-warnings, not hidden behind confidence percentages alone.
+Ask turns scene understanding into a request for help. It displays:
 
-## 5. Ask and Plan
+- A concise scene summary.
+- A multiline natural-language question field.
+- An optional destination field for route-aware guidance.
+- Suggested prompt controls.
+- One primary **Get guidance** action.
 
-The user can ask a natural-language question in the chat panel or select a
-suggested prompt. The optional destination field supports a place name such as
-Fort Kochi ferry. Its Plan route action is disabled until a scene exists and is
-not busy.
+The form accepts a question, a destination, or both. When only a destination is
+provided, CityMind constructs a route-oriented request. A text destination is
+passed as a typed `destinationQuery`; it is never silently replaced by a default
+place. Inputs are disabled while reasoning is in progress.
 
-A destination is passed as a typed destinationQuery. If no destination can be
-confidently resolved, CityMind explains whether it is missing, unavailable, or
-not found instead of drawing a route to a default place.
+Successful reasoning automatically opens Act.
 
-## 6. Receive and Act
+## 4. Act
 
-Recommendation cards present:
+Act presents the decision before the supporting detail:
 
-* Recommendation title and action.
-* Explanation and benefits.
-* Effort and confidence.
-* Suggested action.
-* Warnings and verification needs.
+1. Structured recommendation, explanation, benefits, confidence, warnings,
+   and verification needs.
+2. Route context with live/estimated/unavailable state and interactive map when
+   possible.
+3. Follow-up chat for refinement.
 
-Recommendation actions move keyboard focus to the route/map area for navigation,
-accessibility, and transport advice, or to the conversation area for a
-follow-up. Nearby places use an Ask CityMind action instead of pretending to be
-live place data.
+Recommendation actions move keyboard focus to the route context. Nearby places
+use an **Ask CityMind** style follow-up, not an unqualified claim that a live
+place listing exists. Chat remains unavailable until a recommendation exists.
 
-## 7. Inspect Route Context
+---
 
-The map panel receives a normalized walking route after destination resolution.
+# Tactile Visual Rules
 
-When Mapbox GL is available it displays:
+The design uses restrained skeuomorphic elements inspired by softly molded
+mobile controls:
 
-* Current location and resolved destination markers.
-* Route GeoJSON.
-* Distance, duration, travel mode, and turn summary.
-* Navigation and recenter controls.
-* Route source/status and an accessibility-verification notice.
+- Raised workflow rail, stage workspace, panels, and primary controls.
+- Inset wells for photo review, status, and supporting input areas.
+- Small, fast pressed-state feedback for enabled controls.
+- Generous rounding, cool blue-slate surfaces, and paired soft shadows.
+- Clear primary blue, emerald success, amber verification, and red error
+  semantics.
 
-A live route is visually distinct from an estimated fallback route. A walking
-route is never presented as step-free or accessible solely because the selected
-persona has accessibility needs.
+These effects are intentionally quiet. Avoid excessive layers, dark inset
+shadows that reduce contrast, glossy decoration, fake materials, or ornamental
+icons. A tactile surface must still look and behave like a semantic button,
+form field, status, or content region.
 
-When Mapbox is unavailable, unauthorized, or unsupported, CityMind preserves
-the route summary and instructions in a text-readable local map fallback. This
-is a degraded visualization state, not a failed recommendation flow.
+Use text, icon, position, and semantics alongside color and depth for selected,
+complete, disabled, busy, and error states. Focus rings must remain more visible
+than any shadow treatment.
 
-## 8. Continue the Conversation
+---
 
-Chat retains the active browser-session context only. It supports a multiline
-input, suggested prompts, disabled state before scene readiness, and a visible
-sending state. CityMind currently returns complete replies rather than
-token-streamed output.
+# Route and Map Experience
+
+The Act-stage map receives a normalized walking route only after a destination
+is resolved. When Google Maps JavaScript API is available it displays:
+
+- Current-location and resolved-destination markers.
+- Route polyline.
+- Distance, duration, walking mode, and turn summary.
+- Zoom, map-type, fullscreen, Street View, and recenter controls.
+- Advanced Markers and custom map styling when an optional map ID is configured.
+- Route source/status and an accessibility-verification notice.
+
+A live route is visually distinct from an explicitly estimated fallback route.
+Neither a walking route nor a persona preference may be presented as proof of a
+step-free or accessible path.
+
+When Google Maps is unavailable, unauthorized, or unsupported, Act retains route
+metrics and instructions in a text-readable local visual fallback. This is a
+degraded visualization state, not a failed recommendation flow.
 
 ---
 
 # State Feedback
 
-| Workflow state | User-facing feedback | Primary recovery or next action |
-| --- | --- | --- |
-| idle | Capture or upload prompt and onboarding | Select a photo. |
-| image-ready | Preview and confirm prompt | Confirm, retake, or choose another. |
-| analyzing | Analysis steps and image overlay | Wait; retry the selected photo after failure. |
-| scene-ready | Scene summary and contextual prompts | Ask a question or add a destination. |
-| reasoning | Reasoning status and disabled duplicate actions | Wait; retry the same scene/question/persona after failure. |
-| ready | Recommendation, warnings, map, and chat | Act on guidance or ask a follow-up. |
-| chatting | Visible send state | Wait; retry the same follow-up after failure. |
-| error | Calm ErrorState with specific retry label | Retry the last incomplete operation. |
+| Workflow state | Active or likely stage | User-facing feedback                                         | Recovery or next action                                |
+| -------------- | ---------------------- | ------------------------------------------------------------ | ------------------------------------------------------ |
+| idle           | Capture                | Camera/upload/demo prompt.                                   | Select a photo.                                        |
+| image-ready    | Confirm                | Preview and context-confirmation prompt.                     | Analyze, replace, or return to Capture.                |
+| analyzing      | Confirm                | Analysis steps and preview overlay.                          | Wait; retry selected photo after failure.              |
+| scene-ready    | Ask                    | Scene summary and contextual prompts.                        | Ask a question or add a destination.                   |
+| reasoning      | Ask                    | Guidance preparation status and disabled duplicate controls. | Wait; retry same scene/question/persona after failure. |
+| ready          | Act                    | Recommendation, warnings, route context, and chat.           | Inspect, act, or refine.                               |
+| chatting       | Act                    | Visible send state.                                          | Wait; retry same follow-up after failure.              |
+| error          | Relevant prior stage   | Calm ErrorState with operation-specific retry label.         | Retry the incomplete operation.                        |
 
-Initial route loading is covered by a page-level skeleton. An unexpected
-route-segment render failure is caught by the error boundary and provides retry
-and return-home actions.
+Initial route loading is covered by a page-level skeleton. An unexpected route
+segment render failure is caught by the error boundary and provides retry and
+return-home actions.
 
 ---
 
@@ -215,19 +237,20 @@ and return-home actions.
 
 Users must always know what happened and what they can do next.
 
-* Camera failure: explain the permission or device issue; offer upload.
-* Invalid or oversized image: explain the image requirement without technical
+- Camera failure: explain the device or permission issue; offer upload.
+- Invalid or oversized image: explain the image requirement without technical
   provider details.
-* OpenAI failure: use typed deterministic fallback data and show uncertainty.
-* Destination search failure: ask for a more specific place; do not fabricate a
-  destination.
-* Live directions failure: show an explicitly estimated guide only after live
+- OpenAI failure: use typed deterministic fallback data and show uncertainty.
+- Destination search failure: say whether it is missing, unavailable, or not
+  found; ask for a more specific place and do not fabricate a destination.
+- Live-directions failure: show an explicitly estimated guide only after live
   providers cannot route.
-* Map rendering failure: retain textual directions and local route visual.
-* Chat failure: preserve the user's last message and offer a no-duplicate retry.
+- Map-rendering failure: retain textual directions and the local route visual.
+- Chat failure: preserve the user's last message and offer a no-duplicate retry.
 
-Retry behavior is operation-specific. It must not re-run vision after a chat
-error or silently discard a resolved scene when reasoning fails.
+Retry is operation-specific. It must not re-run vision after a chat error,
+silently discard a scene when reasoning fails, or trap the user in a stage that
+cannot be completed.
 
 ---
 
@@ -235,43 +258,39 @@ error or silently discard a resolved scene when reasoning fails.
 
 CityMind supports:
 
-* Semantic headings, forms, buttons, lists, and labels.
-* Keyboard navigation with visible focus rings.
-* Skip link to the capture workflow.
-* Live status messaging for workflow, map, and action notices.
-* Screen-reader labels for camera, map, route controls, and theme control.
-* WCAG-aware semantic color tokens.
-* Reduced-motion behavior for animations and scroll/focus movement.
-* Text route metrics and instructions as an alternative to the interactive map.
+- Semantic headings, forms, buttons, lists, and labels.
+- Keyboard navigation with visible focus rings.
+- A skip link to the active workflow stage.
+- Live status messaging for workflow, map, and action notices.
+- Screen-reader labels for camera, map, route controls, and theme control.
+- WCAG-aware semantic color tokens.
+- Reduced-motion behavior for animations and scroll/focus movement.
+- Text route metrics and instructions as an alternative to the interactive map.
+- Disabled future stages that remain understandable without being focus traps.
 
-Accessibility statements in AI guidance remain cautious. CityMind asks users to
+Accessibility claims in AI guidance remain cautious. CityMind asks users to
 verify elevators, ramps, curb cuts, surfaces, and closures when route data does
 not contain trusted evidence.
 
 ---
 
-# Responsive and Visual Rules
+# Responsive and Success Rules
 
-* Keep the recommendation visually ahead of secondary detail.
-* Preserve all capture, confirmation, destination, and retry actions on narrow
-  screens.
-* Use large touch targets and avoid hover-only behavior.
-* Do not trap critical content below an oversized map.
-* Use light and dark semantic tokens consistently; map-provider UI can be a
-  visual exception but must not reduce surrounding contrast.
-* Motion communicates workflow state and respects reduced-motion preferences.
-
----
-
-# MVP Success Checklist
+- Keep one primary stage action visible on narrow screens.
+- Preserve capture, confirmation, destination, retry, and back actions on all
+  viewports.
+- Use large touch targets; do not create hover-only workflow behavior.
+- Keep the recommendation ahead of secondary route detail.
+- Do not trap essential content below the map or behind the rail.
+- Respect light/dark semantic tokens, reduced motion, and screen-reader flow.
 
 The experience is successful when a new user can:
 
-1. Understand CityMind within 30 seconds.
+1. Understand Capture -> Confirm -> Ask -> Act within 30 seconds.
 2. Capture or upload an urban scene and explicitly approve analysis.
 3. Select a persona and receive a contextual, explained recommendation.
 4. Add a destination and understand whether a route is live, estimated, or not
    available.
 5. Continue after an AI, map, or chat issue without losing completed work.
-6. Use the core workflow with keyboard, screen reader, reduced motion, or
-   fallback map support.
+6. Use the workflow with keyboard, screen reader, reduced motion, or fallback
+   map support.

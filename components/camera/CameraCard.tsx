@@ -2,15 +2,7 @@
 
 import { ChangeEvent, useRef, useState } from "react";
 import Image from "next/image";
-import {
-  Camera,
-  Check,
-  ImageUp,
-  RotateCcw,
-  ScanLine,
-  Sparkles,
-  X
-} from "lucide-react";
+import { Camera, Check, ImageUp, RotateCcw, ScanLine, Sparkles, X } from "lucide-react";
 
 import { AnalysisSteps } from "@/components/common/AnalysisSteps";
 import { Button } from "@/components/ui/button";
@@ -23,6 +15,7 @@ interface CameraCardProps {
   onImageSelected: (file: File) => void;
   onConfirm: () => void;
   onClear: () => void;
+  showConfirmationAction?: boolean;
 }
 
 export function CameraCard({
@@ -30,13 +23,15 @@ export function CameraCard({
   status,
   onImageSelected,
   onConfirm,
-  onClear
+  onClear,
+  showConfirmationAction = true
 }: CameraCardProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const camera = useCamera();
   const [demoError, setDemoError] = useState<string | null>(null);
   const analyzing = status === "analyzing" || status === "reasoning";
-  const awaitingConfirmation = Boolean(imagePreview) && status === "image-ready";
+  const awaitingConfirmation =
+    showConfirmationAction && Boolean(imagePreview) && status === "image-ready";
 
   const handleUpload = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -185,9 +180,7 @@ export function CameraCard({
         </div>
 
         {camera.error || demoError ? (
-          <p className="text-sm text-amber-600 dark:text-amber-300">
-            {camera.error ?? demoError}
-          </p>
+          <p className="text-sm text-amber-600 dark:text-amber-300">{camera.error ?? demoError}</p>
         ) : null}
 
         <div className="flex flex-wrap gap-3">
@@ -199,12 +192,7 @@ export function CameraCard({
                   Confirm and analyze
                 </Button>
               ) : null}
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleRetake}
-                disabled={analyzing}
-              >
+              <Button type="button" variant="outline" onClick={handleRetake} disabled={analyzing}>
                 <RotateCcw aria-hidden />
                 Retake
               </Button>
@@ -230,11 +218,7 @@ export function CameraCard({
             </Button>
           )}
           {!imagePreview ? (
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => inputRef.current?.click()}
-            >
+            <Button type="button" variant="outline" onClick={() => inputRef.current?.click()}>
               <ImageUp aria-hidden />
               Upload
             </Button>

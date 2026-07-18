@@ -5,12 +5,7 @@ import { Bot, Send, UserRound } from "lucide-react";
 import { motion, useReducedMotion } from "framer-motion";
 
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import type { ChatMessage } from "@/types/chat";
@@ -33,7 +28,6 @@ export function ChatPanel({
   onPromptSelect
 }: ChatPanelProps) {
   const [message, setMessage] = useState("");
-  const reduceMotion = useReducedMotion();
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -76,9 +70,7 @@ export function ChatPanel({
           aria-relevant="additions text"
         >
           {messages.length ? (
-            messages.map((chatMessage) => (
-              <ChatBubble key={chatMessage.id} message={chatMessage} />
-            ))
+            messages.map((chatMessage) => <ChatBubble key={chatMessage.id} message={chatMessage} />)
           ) : (
             <div className="flex h-full min-h-[190px] items-center justify-center text-center text-sm text-muted-foreground">
               Ask a recommendation question after the scene is understood.
@@ -155,9 +147,7 @@ function ChatBubble({ message }: { message: ChatMessage }) {
       <div
         className={cn(
           "max-w-[82%] rounded-lg px-3 py-2 text-sm leading-6",
-          isUser
-            ? "bg-primary text-primary-foreground"
-            : "border bg-card text-card-foreground"
+          isUser ? "bg-primary text-primary-foreground" : "border bg-card text-card-foreground"
         )}
       >
         {message.content}

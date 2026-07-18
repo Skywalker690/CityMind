@@ -1,10 +1,5 @@
 import { getPersona } from "@/lib/personas";
-import type {
-  Coordinates,
-  Destination,
-  DestinationResolution,
-  RouteSummary
-} from "@/types/map";
+import type { Coordinates, Destination, DestinationResolution, RouteSummary } from "@/types/map";
 import type { PersonaId } from "@/types/persona";
 import type { ReasoningResult, Recommendation } from "@/types/recommendation";
 import type { VisionScene } from "@/types/vision";
@@ -56,9 +51,7 @@ export function createFallbackScene(location?: Coordinates): VisionScene {
       "Prefer marked pedestrian paths over road edges.",
       "Verify elevators or ramps before committing to the route."
     ],
-    warnings: [
-      "This is a fallback scene interpretation because live AI vision is unavailable."
-    ],
+    warnings: ["This is a fallback scene interpretation because live AI vision is unavailable."],
     confidence: 0.58,
     location
   };
@@ -71,10 +64,7 @@ export function createFallbackRoute(input: {
   /** Use a reference label when the device has not supplied its location. */
   originLabel?: string;
 }): RouteSummary {
-  const directDistance = calculateDistanceMeters(
-    input.origin,
-    input.destination.coordinates
-  );
+  const directDistance = calculateDistanceMeters(input.origin, input.destination.coordinates);
   const distanceMeters = Math.max(1, Math.round(directDistance * 1.25));
   const durationSeconds = Math.max(60, Math.round(distanceMeters / 1.15));
   const accessibilityWarning =
@@ -82,7 +72,7 @@ export function createFallbackRoute(input: {
 
   return {
     origin: {
-      label: input.originLabel ?? "Current location",
+      label: input.originLabel ?? "Reference location",
       coordinates: input.origin,
       type: "origin"
     },
@@ -109,10 +99,7 @@ export function createFallbackRoute(input: {
       type: "LineString",
       coordinates: [
         [input.origin.longitude, input.origin.latitude],
-        [
-          input.destination.coordinates.longitude,
-          input.destination.coordinates.latitude
-        ]
+        [input.destination.coordinates.longitude, input.destination.coordinates.latitude]
       ]
     },
     steps: [
@@ -126,10 +113,7 @@ export function createFallbackRoute(input: {
   };
 }
 
-function recommendationForPersona(
-  persona: PersonaId,
-  destination?: Destination
-): Recommendation {
+function recommendationForPersona(persona: PersonaId, destination?: Destination): Recommendation {
   const profile = getPersona(persona);
   const destinationContext = destination
     ? ` toward ${destination.label}`
@@ -277,9 +261,7 @@ function calculateDistanceMeters(origin: Coordinates, destination: Coordinates) 
   const destinationLatitude = toRadians(destination.latitude);
   const haversine =
     Math.sin(latitudeDelta / 2) ** 2 +
-    Math.cos(originLatitude) *
-      Math.cos(destinationLatitude) *
-      Math.sin(longitudeDelta / 2) ** 2;
+    Math.cos(originLatitude) * Math.cos(destinationLatitude) * Math.sin(longitudeDelta / 2) ** 2;
 
   return earthRadiusMeters * 2 * Math.atan2(Math.sqrt(haversine), Math.sqrt(1 - haversine));
 }

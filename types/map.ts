@@ -10,7 +10,7 @@ export interface DestinationInput {
   coordinates?: Coordinates;
 }
 
-export type DestinationSource = "explicit-coordinates" | "mapbox-geocoding";
+export type DestinationSource = "explicit-coordinates" | "google-places";
 
 export interface Destination {
   label: string;
@@ -51,7 +51,7 @@ export interface RouteLineString {
 }
 
 /** The provider that supplied the route geometry and instructions. */
-export type RouteSource = "mapbox" | "osrm" | "fallback";
+export type RouteSource = "google" | "osrm" | "fallback";
 
 export type RouteStatus = "routed" | "estimated";
 

@@ -37,9 +37,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${geist.variable} min-h-screen font-sans`}>
-        {children}
-      </body>
+      <body className={`${geist.variable} min-h-screen font-sans`}>{children}</body>
     </html>
   );
 }

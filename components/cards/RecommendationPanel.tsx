@@ -1,33 +1,26 @@
 "use client";
 
-import {
-  ArrowUpRight,
-  Lightbulb,
-  MapPin,
-  MessageSquareText
-} from "lucide-react";
+import { ArrowUpRight, Lightbulb, MapPin, MessageSquareText } from "lucide-react";
 
 import { EmptyState } from "@/components/common/EmptyState";
 import { RecommendationCard } from "@/components/cards/RecommendationCard";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import type {
-  NearbyPlace,
-  ReasoningResult,
-  Recommendation
-} from "@/types/recommendation";
+import type { NearbyPlace, ReasoningResult, Recommendation } from "@/types/recommendation";
 
 interface RecommendationPanelProps {
   result: ReasoningResult | null;
   onRecommendationAction?: (recommendation: Recommendation) => void;
   onNearbyPlaceSelect?: (place: NearbyPlace) => void;
+  nearbyPlaceDisabled?: boolean;
 }
 
 export function RecommendationPanel({
   result,
   onRecommendationAction,
-  onNearbyPlaceSelect
+  onNearbyPlaceSelect,
+  nearbyPlaceDisabled = false
 }: RecommendationPanelProps) {
   if (!result) {
     return (
@@ -46,9 +39,7 @@ export function RecommendationPanel({
           <h2 id="recommendation-title" className="text-xl font-semibold">
             Recommendation
           </h2>
-          <p className="text-sm text-muted-foreground">
-            Intent detected: {result.intent}
-          </p>
+          <p className="text-sm text-muted-foreground">Intent detected: {result.intent}</p>
         </div>
         <Badge variant="success">{Math.round(result.confidence * 100)}% overall</Badge>
       </div>
@@ -113,6 +104,7 @@ export function RecommendationPanel({
                       size="sm"
                       className="shrink-0 self-start sm:self-auto"
                       onClick={() => onNearbyPlaceSelect(place)}
+                      disabled={nearbyPlaceDisabled}
                     >
                       Ask CityMind
                       <ArrowUpRight aria-hidden />

@@ -1,7 +1,11 @@
 # dependencies
 node_modules
+.pnpm-store/
 .pnp
 .pnp.*
+
+# CityMind uses pnpm; do not commit an npm-generated lockfile.
+package-lock.json
 
 # next
 .next

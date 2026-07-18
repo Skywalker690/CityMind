@@ -1,6 +1,13 @@
 import { ZodError } from "zod";
 
-import { apiError, apiSuccess, validationError } from "@/lib/api";
+import {
+  apiError,
+  apiSuccess,
+  parseJsonRequest,
+  RequestBodyError,
+  requestBodyError,
+  validationError
+} from "@/lib/api";
 import { normalizeVisionScene } from "@/lib/normalizers";
 import { reasonRequestSchema } from "@/lib/validators";
 import { generateReasoning } from "@/services/reasoningService";
@@ -9,7 +16,7 @@ export const runtime = "nodejs";
 
 export async function POST(request: Request) {
   try {
-    const payload = reasonRequestSchema.parse(await request.json());
+    const payload = await parseJsonRequest(request, reasonRequestSchema);
     const scene = normalizeVisionScene(payload.scene);
     const result = await generateReasoning({
       scene,
@@ -26,10 +33,10 @@ export async function POST(request: Request) {
       return validationError(error);
     }
 
-    return apiError(
-      "REASONING_FAILED",
-      "Unable to generate a recommendation right now.",
-      503
-    );
+    if (error instanceof RequestBodyError) {
+      return requestBodyError(error);
+    }
+
+    return apiError("REASONING_FAILED", "Unable to generate a recommendation right now.", 503);
   }
 }

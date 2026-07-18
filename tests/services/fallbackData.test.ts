@@ -53,9 +53,7 @@ describe("deterministic fallback data", () => {
       [origin.longitude, origin.latitude],
       [destination.coordinates.longitude, destination.coordinates.latitude]
     ]);
-    expect(route.warnings).toContain(
-      "Live walking directions are temporarily unavailable."
-    );
+    expect(route.warnings).toContain("Live walking directions are temporarily unavailable.");
     expect(routeSummarySchema.safeParse(route).success).toBe(true);
   });
 

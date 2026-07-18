@@ -4,7 +4,7 @@
 
 CityMind is an AI-powered urban mobility assistant that combines computer vision, contextual reasoning, and mapping intelligence to help people make smarter decisions while navigating cities.
 
-Unlike traditional navigation applications that only answer *"How do I get there?"*, CityMind answers *"Given who I am, where I am, and what I'm looking at, what is the smartest thing to do next?"*
+Unlike traditional navigation applications that only answer _"How do I get there?"_, CityMind answers _"Given who I am, where I am, and what I'm looking at, what is the smartest thing to do next?"_
 
 ---
 
@@ -14,12 +14,12 @@ Our goal is to build an AI system capable of understanding the real world throug
 
 Instead of simply recognizing objects or landmarks, CityMind understands context and generates personalized recommendations based on:
 
-* User intent
-* Physical surroundings
-* Accessibility needs
-* Transportation options
-* Environmental conditions
-* Urban infrastructure
+- User intent
+- Physical surroundings
+- Accessibility needs
+- Transportation options
+- Environmental conditions
+- Urban infrastructure
 
 The project is being built as an MVP for the **Codex Nightline AI Build Sprint**.
 
@@ -39,12 +39,12 @@ Urban navigation is fragmented.
 
 People constantly switch between multiple applications.
 
-* Google Maps for routes
-* Weather applications
-* Metro applications
-* Search engines
-* Accessibility information
-* Local knowledge
+- Google Maps for routes
+- Weather applications
+- Metro applications
+- Search engines
+- Accessibility information
+- Local knowledge
 
 None of these systems understand the user's complete context.
 
@@ -60,11 +60,11 @@ CityMind reasons.
 
 The application understands:
 
-* where the user is
-* what the camera sees
-* who the user is
-* what the user wants
-* what constraints they have
+- where the user is
+- what the camera sees
+- who the user is
+- what the user wants
+- what constraints they have
 
 before generating recommendations.
 
@@ -88,13 +88,13 @@ Example:
 
 The response becomes:
 
-* Best entrance
-* Elevator availability
-* Walking distance
-* Recommended metro exit
-* Nearby facilities
-* Route explanation
-* Reasoning behind the recommendation
+- Best entrance
+- Elevator availability
+- Walking distance
+- Recommended metro exit
+- Nearby facilities
+- Route explanation
+- Reasoning behind the recommendation
 
 The focus is intelligent decision support.
 
@@ -106,27 +106,39 @@ The MVP focuses on one polished experience.
 
 Supported capabilities:
 
-* Vision analysis
-* Context-aware reasoning
-* Interactive AI chat
-* Route recommendation
-* Accessibility-aware suggestions
-* Map visualization
+- Vision analysis
+- Context-aware reasoning
+- Interactive AI chat
+- Route recommendation
+- Accessibility-aware suggestions
+- Map visualization
 
 Everything else is intentionally excluded.
 
 ## MVP Experience
 
-CityMind is a single responsive workflow:
+CityMind is one responsive route with a deliberately staged workspace, not a
+simultaneous dashboard. The user sees one meaningful decision at a time:
 
-1. Select a persona and capture, upload, or load a demo urban scene.
-2. Review the image, then explicitly confirm before vision analysis starts.
-3. Ask a question and optionally enter a destination query.
-4. Receive an explained recommendation, a truthfully labelled walking-route
-   state, and an interactive Mapbox visualization when available.
-5. Continue with context-aware follow-up chat.
+1. **Capture** — capture, upload, or load a demo urban scene.
+2. **Confirm** — review the photo, choose a mobility persona, optionally share
+   location, and explicitly approve vision analysis.
+3. **Ask** — review the scene summary, ask a question, and optionally add a
+   destination query.
+4. **Act** — receive an explained recommendation, a truthfully labelled
+   walking-route state, Google Maps visualization when available, and contextual
+   follow-up chat.
 
-The header includes an accessible light/dark toggle. Loading, retries, an
+A controlled step rail shows progress. Future stages remain unavailable until
+their required context exists; completed stages stay available for review and
+correction during the active browser session. Successful work advances the
+user to the next meaningful stage automatically.
+
+The visual system uses restrained, accessible skeuomorphic surfaces: softly
+raised panels, inset review areas, tactile controls, and clear pressed,
+focused, disabled, and selected states. These are interaction cues, never the
+only way status is communicated. The header includes an accessible light/dark
+toggle whose local preference is restored on later visits. Loading, retries, an
 error boundary, and map/text fallbacks ensure an incomplete provider response
 does not strand the user.
 
@@ -136,16 +148,16 @@ does not strand the user.
 
 The following are intentionally excluded from the MVP.
 
-* Authentication
-* User management
-* Payments
-* Social features
-* Notifications
-* Admin dashboards
-* Analytics
-* Complex databases
-* Enterprise backend architecture
-* Multi-tenancy
+- Authentication
+- User management
+- Payments
+- Social features
+- Notifications
+- Admin dashboards
+- Analytics
+- Complex databases
+- Enterprise backend architecture
+- Multi-tenancy
 
 ---
 
@@ -153,15 +165,15 @@ The following are intentionally excluded from the MVP.
 
 Primary
 
-* Metro commuters
+- Metro commuters
 
 Secondary
 
-* Tourists
-* Elderly users
-* Wheelchair users
-* Students
-* Visitors
+- Tourists
+- Elderly users
+- Wheelchair users
+- Students
+- Visitors
 
 ---
 
@@ -169,35 +181,35 @@ Secondary
 
 ## Frontend
 
-* Next.js 15
-* React
-* TypeScript
-* Tailwind CSS
-* shadcn/ui
-* Framer Motion
+- Next.js 15
+- React
+- TypeScript
+- Tailwind CSS
+- shadcn/ui
+- Framer Motion
 
 ---
 
 ## AI
 
-* OpenAI Responses API
-* Vision-capable OpenAI model
-* Structured Outputs
+- OpenAI Responses API
+- Vision-capable OpenAI model
+- Structured Outputs
 
 ---
 
 ## Mapping
 
-* Mapbox GL JS
-* Mapbox Search Geocoding
-* Mapbox Directions walking routes
-* OSRM foot routing as a secondary provider
+- Google Maps JavaScript API
+- Google Places API (New) Text Search for destination resolution
+- Google Routes API Compute Routes for walking routes
+- OSRM foot routing as an optional secondary provider
 
 ---
 
 ## Backend
 
-* Next.js API Routes
+- Next.js API Routes
 
 No separate backend service will be created unless absolutely necessary.
 
@@ -215,7 +227,7 @@ Supabase will be used.
 
 ## Deployment
 
-* Vercel
+- Vercel
 
 ---
 
@@ -235,11 +247,14 @@ Required for live AI, destination search, and map rendering:
 OPENAI_API_KEY=
 OPENAI_MODEL=gpt-4.1-mini
 
-# Browser-safe public Mapbox token for map rendering.
-NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN=
+# Browser-safe Google Maps JavaScript API key for interactive map rendering.
+NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=
 
-# Server-side Mapbox token for destination geocoding and walking directions.
-MAPBOX_ACCESS_TOKEN=
+# Optional Google Map ID for Advanced Markers and custom map styling.
+NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID=
+
+# Server-only key for Google Places Text Search and Google Routes API requests.
+GOOGLE_MAPS_SERVER_API_KEY=
 
 # Optional secondary route provider. Set only to an endpoint configured with a
 # walking/foot profile; generic public demo endpoints do not guarantee this.
@@ -250,10 +265,13 @@ During local development, CityMind reads `.env.local` and `.env` directly before
 falling back to inherited shell variables. This prevents stale system-level API
 keys from overriding the project file.
 
-`NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN` is intentionally browser-visible and must be
-a Mapbox public token (`pk.`). Keep `MAPBOX_ACCESS_TOKEN` server-only. The same
-public token can be used for both during a demo, although separate tokens make
-environment management clearer.
+`NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` is intentionally browser-visible and should
+be restricted to the app's approved browser origins in Google Cloud. Keep
+`GOOGLE_MAPS_SERVER_API_KEY` server-only and enable the Google Maps JavaScript,
+Places API (New), and Routes API for the project. The server can fall back to
+the public key only for local/demo compatibility; deployed environments should
+use a dedicated server key. `NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID` is optional and
+enables Advanced Markers and custom map styling when configured.
 
 Run the development server:
 
@@ -263,15 +281,15 @@ pnpm dev
 
 The app is designed to fail safely when a provider is unavailable:
 
-* Missing or failed OpenAI calls return deterministic, persona-aware fallback
+- Missing or failed OpenAI calls return deterministic, persona-aware fallback
   scene and recommendation data with clear warnings.
-* Text destinations are resolved through Mapbox. If destination search is
-  missing, unavailable, or cannot confidently find a place, CityMind does not
-  invent a route.
-* CityMind requests Mapbox walking directions first, then an OSRM foot-profile
-  route if the primary provider is unavailable. Only when both live providers
-  fail does it render an explicitly labelled estimated route.
-* If Mapbox GL cannot render in the browser, the map panel keeps route details
+- Text destinations are resolved through Google Places API (New) Text Search.
+  If destination search is missing, unavailable, or cannot confidently find a
+  place, CityMind does not invent a route.
+- CityMind requests Google Routes API walking directions first, then an OSRM
+  foot-profile route if the primary provider is unavailable. Only when both live
+  providers fail does it render an explicitly labelled estimated route.
+- If Google Maps cannot render in the browser, the map panel keeps route details
   available and shows a local visual fallback.
 
 Provider timeouts are bounded to 30 seconds for AI operations and 10 seconds
@@ -370,13 +388,13 @@ Every implementation must follow these rules.
 
 This project prioritizes:
 
-* simplicity
-* maintainability
-* consistency
-* user experience
-* AI-first interactions
-* fast iteration
-* clean architecture
+- simplicity
+- maintainability
+- consistency
+- user experience
+- AI-first interactions
+- fast iteration
+- clean architecture
 
 We do not optimize for enterprise complexity.
 
@@ -390,19 +408,19 @@ When generating code:
 
 Always:
 
-* understand existing architecture
-* reuse components
-* avoid duplication
-* prefer composition
-* maintain consistency
+- understand existing architecture
+- reuse components
+- avoid duplication
+- prefer composition
+- maintain consistency
 
 Never:
 
-* invent APIs
-* invent features
-* invent database schemas
-* ignore documentation
-* silently modify architecture
+- invent APIs
+- invent features
+- invent database schemas
+- ignore documentation
+- silently modify architecture
 
 ---
 
@@ -436,11 +454,11 @@ prompts/
 
 Every prompt must:
 
-* have a single responsibility
-* produce structured outputs where appropriate
-* avoid unnecessary verbosity
-* be version controlled
-* be documented
+- have a single responsibility
+- produce structured outputs where appropriate
+- avoid unnecessary verbosity
+- be version controlled
+- be documented
 
 No prompts should be hardcoded directly into components.
 
@@ -450,15 +468,15 @@ No prompts should be hardcoded directly into components.
 
 General principles:
 
-* TypeScript only
-* Strict typing
-* Functional components
-* Server Components where appropriate
-* Reusable UI
-* Modular architecture
-* Clean naming
-* Minimal abstraction
-* Readability over cleverness
+- TypeScript only
+- Strict typing
+- Functional components
+- Server Components where appropriate
+- Reusable UI
+- Modular architecture
+- Clean naming
+- Minimal abstraction
+- Readability over cleverness
 
 ---
 
@@ -466,11 +484,17 @@ General principles:
 
 The interface should feel:
 
-* modern
-* minimal
-* premium
-* calm
-* AI-first
+- modern
+- minimal
+- premium
+- calm
+- AI-first
+- tactile without sacrificing clarity
+
+Use progressive disclosure: show the active workflow stage rather than asking
+users to parse every input, result, and map panel at once. Soft skeuomorphic
+depth may clarify an interactive surface, but semantic labels, visible focus,
+contrast, and text status remain mandatory.
 
 Animations should enhance clarity, not distract.
 
@@ -508,22 +532,22 @@ Business logic should never live inside UI components.
 
 # Performance Principles
 
-* Minimize API calls
-* Lazy load heavy components
-* Stream AI responses where possible
-* Optimize images
-* Keep bundle size small
-* Prioritize responsiveness
+- Minimize API calls
+- Lazy load heavy components
+- Stream AI responses where possible
+- Optimize images
+- Keep bundle size small
+- Prioritize responsiveness
 
 ---
 
 # Security Principles
 
-* Never expose API keys
-* Validate all inputs
-* Sanitize prompt inputs
-* Handle API failures gracefully
-* Never trust client-side data
+- Never expose API keys
+- Validate all inputs
+- Sanitize prompt inputs
+- Handle API failures gracefully
+- Never trust client-side data
 
 ---
 
@@ -531,9 +555,9 @@ Business logic should never live inside UI components.
 
 Commits should be:
 
-* small
-* meaningful
-* atomic
+- small
+- meaningful
+- atomic
 
 Example:
 
@@ -553,12 +577,12 @@ docs: update AI architecture
 
 A feature is complete only if:
 
-* Implementation works
-* Types are correct
-* UI is polished
-* Error handling exists
-* Documentation is updated
-* Acceptance criteria are satisfied
+- Implementation works
+- Types are correct
+- UI is polished
+- Error handling exists
+- Documentation is updated
+- Acceptance criteria are satisfied
 
 ---
 
@@ -566,11 +590,11 @@ A feature is complete only if:
 
 The MVP succeeds if judges can:
 
-* understand the idea within 30 seconds
-* complete the demo without confusion
-* clearly see the role of AI
-* understand why this is different from traditional navigation
-* believe the concept could evolve into a real product
+- understand the idea within 30 seconds
+- complete the demo without confusion
+- clearly see the role of AI
+- understand why this is different from traditional navigation
+- believe the concept could evolve into a real product
 
 ---
 

@@ -1,179 +1,199 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import {
-  ArrowRight,
-  BrainCircuit,
-  LocateFixed,
-  MapPin,
-  MapPinned,
-  Moon,
-  Route as RouteIcon,
-  Sparkles,
-  Sun,
-  WifiOff
-} from "lucide-react";
-import { motion, useReducedMotion } from "framer-motion";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { BrainCircuit, LocateFixed, Moon, Sparkles, Sun } from "lucide-react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 
-import { CameraCard } from "@/components/camera/CameraCard";
-import { ChatPanel } from "@/components/chat/ChatPanel";
 import { ErrorState } from "@/components/common/ErrorState";
-import { PersonaSelector } from "@/components/persona/PersonaSelector";
-import { RecommendationPanel } from "@/components/cards/RecommendationPanel";
-import { VisionSummary } from "@/components/cards/VisionSummary";
-import { InteractiveMap } from "@/components/map/InteractiveMap";
+import { ActStep } from "@/components/workflow/ActStep";
+import { CaptureStep } from "@/components/workflow/CaptureStep";
+import { ConfirmStep } from "@/components/workflow/ConfirmStep";
+import { QuestionStep } from "@/components/workflow/QuestionStep";
+import {
+  WORKFLOW_STEPS,
+  WorkflowStepper,
+  type WorkflowStepId
+} from "@/components/workflow/WorkflowStepper";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { useCityMind } from "@/hooks/useCityMind";
-import { getPersona } from "@/lib/personas";
+import { cn } from "@/lib/utils";
 import type { NearbyPlace, Recommendation } from "@/types/recommendation";
 
 type ThemeMode = "light" | "dark";
 
+const stepIndex = Object.fromEntries(
+  WORKFLOW_STEPS.map((step, index) => [step.id, index])
+) as Record<WorkflowStepId, number>;
+
+const headingIdByStep: Record<WorkflowStepId, string> = {
+  capture: "capture-step-title",
+  confirm: "confirm-step-title",
+  plan: "ask-step-title",
+  act: "act-step-title"
+};
+
 export function CityMindApp() {
   const cityMind = useCityMind();
-  const persona = getPersona(cityMind.persona);
   const reduceMotion = useReducedMotion();
+  const [activeStep, setActiveStep] = useState<WorkflowStepId>("capture");
   const [destinationQuery, setDestinationQuery] = useState("");
   const [theme, setTheme] = useState<ThemeMode>("light");
   const [actionNotice, setActionNotice] = useState("");
+  const workflowStageRef = useRef<HTMLElement>(null);
+  const previousStepRef = useRef<WorkflowStepId>("capture");
   const busy =
     cityMind.status === "analyzing" ||
     cityMind.status === "reasoning" ||
     cityMind.status === "chatting";
-  const canAsk = Boolean(cityMind.scene) && !busy;
-  const showOnboarding = !cityMind.imagePreview && !cityMind.scene;
+  const availableStepIndex = useMemo(() => {
+    if (cityMind.result) {
+      return 3;
+    }
+
+    if (cityMind.scene) {
+      return 2;
+    }
+
+    if (cityMind.imagePreview) {
+      return 1;
+    }
+
+    return 0;
+  }, [cityMind.imagePreview, cityMind.result, cityMind.scene]);
+
+  useEffect(() => {
+    const savedTheme = window.localStorage.getItem("citymind-theme");
+
+    if (savedTheme === "light" || savedTheme === "dark") {
+      setTheme(savedTheme);
+      return;
+    }
+
+    if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
+      setTheme("dark");
+    }
+  }, []);
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", theme === "dark");
+    window.localStorage.setItem("citymind-theme", theme);
   }, [theme]);
 
-  const focusSection = (id: string, notice: string) => {
-    const target = document.getElementById(id);
-
-    if (!target) {
+  useEffect(() => {
+    if (!cityMind.imagePreview) {
+      setActiveStep("capture");
       return;
     }
 
-    target.scrollIntoView({
-      behavior: reduceMotion ? "auto" : "smooth",
-      block: "center"
-    });
-    target.focus({ preventScroll: true });
-    setActionNotice(notice);
+    if (cityMind.status === "image-ready" || cityMind.status === "analyzing") {
+      setActiveStep("confirm");
+      return;
+    }
+
+    if (cityMind.status === "scene-ready" || cityMind.status === "reasoning") {
+      setActiveStep("plan");
+      return;
+    }
+
+    if (cityMind.status === "ready" || cityMind.status === "chatting") {
+      setActiveStep("act");
+    }
+  }, [cityMind.imagePreview, cityMind.status]);
+
+  useEffect(() => {
+    setDestinationQuery("");
+  }, [cityMind.imagePreview]);
+
+  useEffect(() => {
+    if (previousStepRef.current === activeStep) {
+      return;
+    }
+
+    previousStepRef.current = activeStep;
+    const delay = reduceMotion ? 0 : 260;
+    const timer = window.setTimeout(() => {
+      const heading = document.getElementById(headingIdByStep[activeStep]);
+      (heading ?? workflowStageRef.current)?.focus({ preventScroll: true });
+    }, delay);
+
+    return () => window.clearTimeout(timer);
+  }, [activeStep, reduceMotion]);
+
+  const setStep = (step: WorkflowStepId) => {
+    if (stepIndex[step] <= availableStepIndex) {
+      setActiveStep(step);
+      setActionNotice(`Showing step ${stepIndex[step] + 1}: ${step}.`);
+    }
   };
 
-  const handlePrompt = (message: string) => {
-    if (cityMind.result) {
-      void cityMind.sendChatMessage(message);
-      return;
-    }
-
-    void cityMind.submitPrompt(
-      message,
-      cityMind.persona,
-      true,
-      destinationQuery
-    );
-  };
-
-  const handleRouteRequest = () => {
-    const destination = destinationQuery.trim();
-
-    if (!destination) {
-      setActionNotice("Add a destination to prepare a route recommendation.");
-      document.getElementById("destination-query")?.focus();
-      return;
-    }
-
-    void cityMind.submitPrompt(
-      `What is the best route to ${destination}?`,
-      cityMind.persona,
-      true,
-      destination
-    );
-    setActionNotice(`Preparing a recommendation for ${destination}.`);
+  const handleQuestionSubmit = (prompt: string, destination: string) => {
+    void cityMind.submitPrompt(prompt, cityMind.persona, true, destination || undefined);
+    setActionNotice("CityMind is preparing guidance from your confirmed scene and question.");
   };
 
   const handleRecommendationAction = (recommendation: Recommendation) => {
-    const shouldShowMap =
-      ["navigation", "accessibility", "transport"].includes(
-        recommendation.category
-      ) || /map|route|direction/i.test(recommendation.suggestedAction);
-
-    focusSection(
-      shouldShowMap ? "map-panel" : "conversation-panel",
-      shouldShowMap
-        ? "Route details are now in view."
-        : "You can ask CityMind a follow-up question below."
+    const routeAction =
+      ["navigation", "accessibility", "transport"].includes(recommendation.category) ||
+      /map|route|direction/i.test(recommendation.suggestedAction);
+    setActionNotice(
+      routeAction
+        ? `Route context is in focus for ${recommendation.title.toLowerCase()}.`
+        : `Conversation is in focus for ${recommendation.title.toLowerCase()}.`
     );
   };
 
   const handleNearbyPlace = (place: NearbyPlace) => {
-    handlePrompt(`What should I know before visiting ${place.name}?`);
-    focusSection("conversation-panel", `Asking CityMind about ${place.name}.`);
+    void cityMind.sendChatMessage(`What should I know before visiting ${place.name}?`);
+    setActionNotice(`Asking CityMind about ${place.name}.`);
   };
 
-  const toggleTheme = () => {
-    setTheme((current) => (current === "light" ? "dark" : "light"));
-  };
+  const panelMotion = reduceMotion
+    ? { initial: false, animate: { opacity: 1 }, exit: { opacity: 0 } }
+    : {
+        initial: { opacity: 0, y: 10 },
+        animate: { opacity: 1, y: 0 },
+        exit: { opacity: 0, y: -6 }
+      };
 
   return (
-    <main id="citymind-workflow" className="min-h-screen bg-background">
+    <main className="citymind-app min-h-screen bg-background text-foreground">
       <a
-        href="#capture-workflow"
-        className="sr-only fixed left-4 top-4 z-50 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground focus:not-sr-only"
+        href="#workflow-stage"
+        className="sr-only fixed left-4 top-4 z-50 rounded-2xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground focus:not-sr-only"
       >
-        Skip to photo capture
+        Skip to the active workflow step
       </a>
 
-      <header className="border-b bg-card/80 backdrop-blur">
-        <div className="mx-auto flex max-w-[1680px] flex-col gap-5 px-4 py-5 md:px-6 lg:flex-row lg:items-center lg:justify-between">
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge variant="secondary" className="gap-1">
-                <BrainCircuit className="size-3.5" aria-hidden />
-                AI Urban Reasoning
-              </Badge>
-              <Badge variant="outline" className="gap-1">
-                <Sparkles className="size-3.5" aria-hidden />
-                Vision-first
-              </Badge>
+      <header className="border-b border-white/50 bg-background/80 backdrop-blur-xl dark:border-white/5">
+        <div className="mx-auto flex max-w-[1440px] flex-col gap-4 px-4 py-4 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex items-center gap-3">
+            <span className="skeuo-brand-mark" aria-hidden>
+              <BrainCircuit className="size-5" />
+            </span>
+            <div>
+              <p className="text-lg font-semibold tracking-tight">CityMind</p>
+              <p className="text-xs text-muted-foreground">
+                Urban guidance, one decision at a time
+              </p>
             </div>
-            <h1 className="mt-3 text-3xl font-semibold tracking-normal md:text-4xl">
-              CityMind
-            </h1>
-            <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground md:text-base">
-              Point at an urban scene, choose your context, and get an explained
-              recommendation that adapts to how you move through the city.
-            </p>
           </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <StatusBadge status={cityMind.status} />
-            <Button
-              type="button"
-              variant="outline"
-              onClick={cityMind.requestLocation}
-              disabled={cityMind.permissionState === "loading"}
-              className="gap-2"
-            >
-              {cityMind.permissionState === "denied" ? (
-                <WifiOff aria-hidden />
-              ) : (
-                <LocateFixed aria-hidden />
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+            <WorkflowStatusBadge status={cityMind.status} />
+            <span
+              className={cn(
+                "skeuo-location hidden items-center gap-2 px-3 py-2 text-xs sm:inline-flex",
+                cityMind.hasDeviceLocation && "text-emerald-700 dark:text-emerald-300"
               )}
-              {cityMind.permissionState === "granted"
-                ? "Location active"
-                : cityMind.permissionState === "loading"
-                  ? "Finding location"
-                  : "Use location"}
-            </Button>
+            >
+              <LocateFixed className="size-3.5" aria-hidden />
+              {cityMind.hasDeviceLocation ? "Location ready" : "Location optional"}
+            </span>
             <Button
               type="button"
               variant="ghost"
               size="icon"
-              onClick={toggleTheme}
+              onClick={() => setTheme((current) => (current === "light" ? "dark" : "light"))}
               aria-label={`Switch to ${theme === "light" ? "dark" : "light"} mode`}
               title={`Switch to ${theme === "light" ? "dark" : "light"} mode`}
             >
@@ -183,234 +203,146 @@ export function CityMindApp() {
         </div>
       </header>
 
-      {showOnboarding ? (
-        <motion.section
-          initial={reduceMotion ? false : { opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: reduceMotion ? 0 : 0.25 }}
-          aria-labelledby="onboarding-title"
-          className="border-b bg-gradient-to-br from-primary/10 via-background to-emerald-500/10"
-        >
-          <div className="mx-auto grid max-w-[1680px] gap-6 px-4 py-7 md:px-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-center">
-            <div>
-              <p className="text-sm font-medium text-primary">Your urban copilot</p>
-              <h2
-                id="onboarding-title"
-                className="mt-2 max-w-3xl text-2xl font-semibold tracking-normal md:text-3xl"
-              >
-                See the street first. Then decide with confidence.
-              </h2>
-              <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground md:text-base">
-                CityMind turns a photo, your mobility needs, and your destination
-                into an explained next step—not just a generic route.
-              </p>
-              <Button
-                type="button"
-                className="mt-5"
-                onClick={() =>
-                  focusSection(
-                    "capture-workflow",
-                    "Start by capturing or uploading the urban scene around you."
-                  )
-                }
-              >
-                Start exploring
-                <ArrowRight aria-hidden />
-              </Button>
-            </div>
-            <ol className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1" aria-label="How CityMind works">
-              <OnboardingStep number="1" title="Capture" description="Show CityMind your surroundings." />
-              <OnboardingStep number="2" title="Confirm" description="Review the photo before AI analysis." />
-              <OnboardingStep number="3" title="Act" description="Ask for the next best move." />
-            </ol>
-          </div>
-        </motion.section>
-      ) : null}
-
-      <div className="mx-auto grid max-w-[1680px] gap-5 px-4 py-5 md:px-6 xl:grid-cols-[340px_minmax(0,1fr)_430px]">
-        <aside className="space-y-5 xl:sticky xl:top-5 xl:self-start">
-          <PersonaSelector
-            value={cityMind.persona}
-            onChange={cityMind.selectPersona}
-            disabled={busy}
-          />
-          <CameraCard
-            imagePreview={cityMind.imagePreview}
-            status={cityMind.status}
-            onImageSelected={cityMind.selectImage}
-            onConfirm={cityMind.confirmImage}
-            onClear={cityMind.clearImage}
+      <div className="mx-auto grid max-w-[1440px] gap-5 px-4 py-5 sm:px-6 lg:grid-cols-[280px_minmax(0,1fr)] lg:gap-8 lg:py-8">
+        <aside className="lg:sticky lg:top-6 lg:self-start">
+          <WorkflowStepper
+            activeStep={activeStep}
+            availableStepIndex={availableStepIndex}
+            onStepChange={setStep}
           />
         </aside>
 
-        <section aria-label="CityMind guidance" className="space-y-5">
-          <motion.div
-            initial={reduceMotion ? false : { opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: reduceMotion ? 0 : 0.25 }}
-            className="rounded-lg border bg-card p-5 shadow-soft"
-          >
-            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-              <div>
-                <p className="text-sm font-medium text-primary">
-                  Active context: {persona.label}
-                </p>
-                <h2 className="mt-1 text-2xl font-semibold tracking-normal">
-                  Vision -&gt; Context -&gt; Recommendation
-                </h2>
-                <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-                  CityMind combines the selected persona, scene understanding,
-                  prompt intent, and route context before recommending what to do.
-                </p>
-              </div>
-              <div className="rounded-lg border bg-background/70 p-3 text-sm">
-                <div className="flex items-center gap-2 font-medium">
-                  <MapPinned className="size-4 text-emerald-500" aria-hidden />
-                  Persona priorities
-                </div>
-                <p className="mt-1 max-w-xs text-muted-foreground">
-                  {persona.priorities.join(" / ")}
-                </p>
-              </div>
+        <section
+          id="workflow-stage"
+          ref={workflowStageRef}
+          tabIndex={-1}
+          className="skeuo-workspace min-w-0 rounded-[34px] p-4 outline-none sm:p-6 lg:p-8"
+        >
+          <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-border/70 pb-5">
+            <div className="flex items-center gap-2">
+              <span className="skeuo-progress-number">
+                {String(stepIndex[activeStep] + 1).padStart(2, "0")}
+              </span>
+              <span className="text-sm font-medium text-muted-foreground">
+                {WORKFLOW_STEPS[stepIndex[activeStep]].label} stage
+              </span>
             </div>
-          </motion.div>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Sparkles className="size-3.5 text-primary" aria-hidden />
+              Your context stays with you
+            </div>
+          </div>
 
-          <section
-            aria-labelledby="destination-title"
-            className="rounded-lg border bg-card p-5 shadow-soft"
-          >
-            <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <MapPin className="size-4 text-primary" aria-hidden />
-                  <h2 id="destination-title" className="font-semibold">
-                    Where are you heading?
-                  </h2>
-                </div>
-                <p id="destination-help" className="mt-1 text-sm text-muted-foreground">
-                  Add a destination and CityMind will use it when preparing the next route recommendation.
-                </p>
-              </div>
-              <form
-                className="flex w-full flex-col gap-2 sm:flex-row md:max-w-md"
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  handleRouteRequest();
-                }}
-              >
-                <Input
-                  id="destination-query"
-                  value={destinationQuery}
-                  onChange={(event) => setDestinationQuery(event.target.value)}
-                  placeholder="e.g. Fort Kochi ferry"
-                  aria-describedby="destination-help"
-                  autoComplete="off"
+          {cityMind.error ? (
+            <div className="mb-6">
+              <ErrorState
+                message={cityMind.error}
+                retryLabel={cityMind.retryDetails.label}
+                retryDescription={cityMind.retryDetails.description}
+                onRetry={cityMind.retry}
+              />
+            </div>
+          ) : null}
+
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.div
+              key={activeStep}
+              {...panelMotion}
+              transition={{ duration: reduceMotion ? 0 : 0.22, ease: "easeOut" }}
+            >
+              {activeStep === "capture" ? (
+                <CaptureStep
+                  imagePreview={cityMind.imagePreview}
+                  status={cityMind.status}
+                  onImageSelected={cityMind.selectImage}
+                  onClear={cityMind.clearImage}
+                  onContinue={() => setStep("confirm")}
                 />
-                <Button
-                  type="submit"
-                  disabled={!cityMind.scene || busy}
-                  className="shrink-0"
-                >
-                  <RouteIcon aria-hidden />
-                  {cityMind.status === "reasoning" ? "Planning" : "Plan route"}
-                </Button>
-              </form>
-            </div>
-          </section>
+              ) : null}
 
+              {activeStep === "confirm" ? (
+                <ConfirmStep
+                  imagePreview={cityMind.imagePreview}
+                  persona={cityMind.persona}
+                  status={cityMind.status}
+                  permissionState={cityMind.permissionState}
+                  onPersonaChange={cityMind.selectPersona}
+                  onAnalyze={cityMind.confirmImage}
+                  onRequestLocation={cityMind.requestLocation}
+                  onBackToCapture={() => {
+                    cityMind.clearImage();
+                    setActiveStep("capture");
+                  }}
+                />
+              ) : null}
+
+              {activeStep === "plan" ? (
+                <QuestionStep
+                  scene={cityMind.scene}
+                  suggestedPrompts={cityMind.suggestedPrompts}
+                  destinationQuery={destinationQuery}
+                  busy={busy}
+                  onDestinationChange={setDestinationQuery}
+                  onSubmit={handleQuestionSubmit}
+                />
+              ) : null}
+
+              {activeStep === "act" ? (
+                <ActStep
+                  result={cityMind.result}
+                  location={cityMind.location}
+                  hasDeviceLocation={cityMind.hasDeviceLocation}
+                  messages={cityMind.chatMessages}
+                  suggestedPrompts={cityMind.suggestedPrompts}
+                  busy={busy}
+                  onRecommendationAction={handleRecommendationAction}
+                  onNearbyPlaceSelect={handleNearbyPlace}
+                  onSendMessage={(message) => void cityMind.sendChatMessage(message)}
+                />
+              ) : null}
+            </motion.div>
+          </AnimatePresence>
           {actionNotice ? (
-            <p className="sr-only" aria-live="polite">
+            <p className="sr-only" role="status" aria-live="polite">
               {actionNotice}
             </p>
           ) : null}
-
-          {cityMind.error ? (
-            <ErrorState
-              message={cityMind.error}
-              retryLabel={cityMind.retryDetails.label}
-              retryDescription={cityMind.retryDetails.description}
-              onRetry={cityMind.retry}
-            />
-          ) : null}
-
-          <VisionSummary scene={cityMind.scene} />
-          <RecommendationPanel
-            result={cityMind.result}
-            onRecommendationAction={handleRecommendationAction}
-            onNearbyPlaceSelect={handleNearbyPlace}
-          />
         </section>
-
-        <aside className="space-y-5 xl:sticky xl:top-5 xl:self-start">
-          <section
-            id="map-panel"
-            tabIndex={-1}
-            aria-label="Route and map details"
-            className="space-y-3"
-          >
-            <InteractiveMap
-              route={cityMind.result?.route}
-              location={cityMind.location}
-            />
-            <p className="rounded-md border bg-background/70 px-3 py-2 text-xs leading-5 text-muted-foreground" aria-live="polite">
-              {cityMind.result?.route
-                ? "Route instructions and map controls are available above. Verify accessibility conditions on arrival."
-                : "A route and turn-by-turn overview will appear here after CityMind prepares a recommendation."}
-            </p>
-          </section>
-          <section id="conversation-panel" tabIndex={-1} aria-label="Conversation with CityMind">
-            <ChatPanel
-              messages={cityMind.chatMessages}
-              suggestedPrompts={cityMind.suggestedPrompts}
-              disabled={!canAsk}
-              loading={cityMind.status === "chatting" || cityMind.status === "reasoning"}
-              onSend={handlePrompt}
-              onPromptSelect={handlePrompt}
-            />
-          </section>
-        </aside>
       </div>
     </main>
   );
 }
 
-function OnboardingStep({
-  number,
-  title,
-  description
-}: {
-  number: string;
-  title: string;
-  description: string;
-}) {
-  return (
-    <li className="rounded-lg border bg-card/80 p-3 shadow-soft">
-      <span className="inline-flex size-6 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
-        {number}
-      </span>
-      <p className="mt-2 text-sm font-semibold">{title}</p>
-      <p className="mt-1 text-xs leading-5 text-muted-foreground">{description}</p>
-    </li>
-  );
-}
-
-function StatusBadge({ status }: { status: string }) {
-  const labelByStatus: Record<string, string> = {
-    idle: "Ready",
-    "image-ready": "Review photo",
-    analyzing: "Analyzing scene",
+function WorkflowStatusBadge({ status }: { status: string }) {
+  const labels: Record<string, string> = {
+    idle: "Ready to capture",
+    "image-ready": "Ready to confirm",
+    analyzing: "Reading scene",
     "scene-ready": "Scene understood",
-    reasoning: "Reasoning",
-    ready: "Recommendation ready",
-    chatting: "Conversation",
+    reasoning: "Preparing guidance",
+    ready: "Guidance ready",
+    chatting: "Refining guidance",
     error: "Needs attention"
   };
-
-  const active = status === "analyzing" || status === "reasoning" || status === "chatting";
+  const active = ["analyzing", "reasoning", "chatting"].includes(status);
 
   return (
-    <Badge variant={status === "error" ? "warning" : active ? "secondary" : "success"}>
-      {labelByStatus[status] ?? "Ready"}
+    <Badge
+      variant={status === "error" ? "warning" : active ? "secondary" : "success"}
+      className="gap-1.5 px-3 py-1.5"
+    >
+      <span
+        className={cn(
+          "size-1.5 rounded-full",
+          status === "error"
+            ? "bg-amber-950"
+            : active
+              ? "bg-primary animate-pulse"
+              : "bg-emerald-950"
+        )}
+        aria-hidden
+      />
+      {labels[status] ?? "Ready"}
     </Badge>
   );
 }

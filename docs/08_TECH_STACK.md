@@ -22,13 +22,13 @@ This is the authoritative reference for technology decisions.
 
 Technology choices should optimize for:
 
-* Rapid development
-* Excellent developer experience
-* AI-first development
-* Fast deployment
-* Reliability
-* Maintainability
-* Production-quality architecture
+- Rapid development
+- Excellent developer experience
+- AI-first development
+- Fast deployment
+- Reliability
+- Maintainability
+- Production-quality architecture
 
 The objective is not to use the most technologies.
 
@@ -38,25 +38,25 @@ The objective is to use the smallest set of technologies that delivers an except
 
 # High-Level Stack
 
-| Layer           | Technology           |
-| --------------- | -------------------- |
-| Framework       | Next.js 15           |
-| Language        | TypeScript           |
-| Runtime         | Node.js              |
-| Styling         | Tailwind CSS         |
-| UI Library      | shadcn/ui            |
-| Animation       | Framer Motion        |
-| Icons           | Lucide React         |
-| AI              | OpenAI Responses API |
-| Vision          | OpenAI Vision        |
-| Map rendering   | Mapbox GL JS         |
-| Geocoding       | Mapbox Search Geocoding |
-| Directions      | Mapbox Directions, then OSRM foot routing |
-| Deployment      | Vercel               |
-| Package Manager | pnpm                 |
-| Validation      | Zod                  |
-| Forms           | Native controlled React forms |
-| HTTP            | Native Fetch         |
+| Layer              | Technology                                               |
+| ------------------ | -------------------------------------------------------- |
+| Framework          | Next.js 15                                               |
+| Language           | TypeScript                                               |
+| Runtime            | Node.js                                                  |
+| Styling            | Tailwind CSS                                             |
+| UI Library         | shadcn/ui                                                |
+| Animation          | Framer Motion                                            |
+| Icons              | Lucide React                                             |
+| AI                 | OpenAI Responses API                                     |
+| Vision             | OpenAI Vision                                            |
+| Map rendering      | Google Maps JavaScript API                               |
+| Destination search | Google Places API (New) Text Search                      |
+| Directions         | Google Routes API Compute Routes, then OSRM foot routing |
+| Deployment         | Vercel                                                   |
+| Package Manager    | pnpm                                                     |
+| Validation         | Zod                                                      |
+| Forms              | Native controlled React forms                            |
+| HTTP               | Native Fetch                                             |
 
 ---
 
@@ -70,22 +70,22 @@ Acts as the complete application framework.
 
 Provides:
 
-* Routing
-* API routes
-* Server Components
-* Client Components
-* Metadata
-* Asset optimization
+- Routing
+- API routes
+- Server Components
+- Client Components
+- Metadata
+- Asset optimization
 
 ---
 
 ### Why Next.js?
 
-* Excellent AI support
-* Fast development
-* Server-side capabilities
-* Production ready
-* Easy deployment on Vercel
+- Excellent AI support
+- Fast development
+- Server-side capabilities
+- Production ready
+- Easy deployment on Vercel
 
 ---
 
@@ -93,9 +93,9 @@ Provides:
 
 Always prefer:
 
-* App Router
-* Server Components
-* Server Actions where appropriate
+- App Router
+- Server Components
+- Server Actions where appropriate
 
 Avoid unnecessary Client Components.
 
@@ -112,15 +112,15 @@ Strict mode enabled.
 Never use:
 
 ```typescript
-any
+any;
 ```
 
 Instead prefer:
 
-* unknown
-* interfaces
-* discriminated unions
-* generics
+- unknown
+- interfaces
+- discriminated unions
+- generics
 
 All exported functions must be typed.
 
@@ -140,9 +140,9 @@ Never write inline styles unless absolutely necessary.
 
 Prefer:
 
-* Utility classes
-* Design tokens
-* Reusable components
+- Utility classes
+- Design tokens
+- Reusable components
 
 ---
 
@@ -156,14 +156,14 @@ Provide accessible, modern UI components.
 
 Use for:
 
-* Buttons
-* Cards
-* Dialogs
-* Inputs
-* Select
-* Tabs
-* Sheets
-* Toasts
+- Buttons
+- Cards
+- Dialogs
+- Inputs
+- Select
+- Tabs
+- Sheets
+- Toasts
 
 Never modify generated components directly.
 
@@ -181,11 +181,11 @@ Smooth interactions.
 
 Use for:
 
-* Page transitions
-* Loading states
-* Recommendation cards
-* Hero animations
-* AI response transitions
+- Page transitions
+- Loading states
+- Recommendation cards
+- Hero animations
+- AI response transitions
 
 Avoid decorative animations that do not improve usability.
 
@@ -209,11 +209,11 @@ Preferred over mixed icon libraries.
 
 Responsibilities
 
-* Vision understanding
-* Urban reasoning
-* Persona reasoning
-* Recommendation generation
-* Structured outputs
+- Vision understanding
+- Urban reasoning
+- Persona reasoning
+- Recommendation generation
+- Structured outputs
 
 ---
 
@@ -221,33 +221,34 @@ Responsibilities
 
 The AI should:
 
-* Return JSON whenever possible.
-* Avoid unnecessary prose.
-* Be deterministic where appropriate.
-* Explain recommendations.
+- Return JSON whenever possible.
+- Avoid unnecessary prose.
+- Be deterministic where appropriate.
+- Explain recommendations.
 
 ---
 
 # Maps
 
-## Mapbox GL JS + Mapbox APIs + OSRM
+## Google Maps Platform + OSRM
 
 Responsibilities
 
-* Mapbox GL JS renders the browser map, route GeoJSON, markers, attribution,
-  navigation controls, and a recenter control.
-* Mapbox Search Geocoding resolves text destinations for the server.
-* Mapbox Directions is the preferred source for walking geometry, route metrics,
-  and steps.
-* A configured OSRM foot-profile endpoint is the secondary live route provider.
-* A final local estimate is clearly labelled as an estimate only after both
+- Google Maps JavaScript API renders the browser map, route geometry, markers,
+  standard map controls, and a recenter action.
+- Google Places API (New) Text Search resolves text destinations for the server.
+- Google Routes API Compute Routes is the preferred source for walking geometry,
+  route metrics, and steps.
+- A configured OSRM foot-profile endpoint is the secondary live route provider.
+- A final local estimate is clearly labelled as an estimate only after both
   live route providers fail.
 
-Mapbox is required by the repository architecture and offers a coherent map,
-geocoding, and directions experience. `mapbox-gl` is dynamically loaded in the
-client-only map component so it does not inflate the server render. The map
+Google Maps Platform provides the browser map, destination search, and walking
+directions experience. The Maps JavaScript library is loaded only in the
+client-side map component so it does not inflate the server render. The map
 always retains a keyboard-readable route summary and local visual fallback when
-a public Mapbox token is absent, unauthorized, or unsupported by the browser.
+the public Google Maps key is absent, unauthorized, or unsupported by the
+browser. An optional map ID enables Advanced Markers and custom map styling.
 
 Map data never proves accessibility by itself. The route contract keeps
 accessibility evidence and warnings separate from persona preferences, and the
@@ -278,10 +279,10 @@ Never trust raw AI responses.
 
 The MVP keeps its small number of forms in local React state:
 
-* Destination query
-* Chat prompt
-* Camera upload selection
-* Persona selection
+- Destination query
+- Chat prompt
+- Camera upload selection
+- Persona selection
 
 This keeps the workflow readable and avoids global form state. `react-hook-form`
 remains an available dependency for future larger forms, but the current
@@ -297,9 +298,9 @@ No additional HTTP client is required for the MVP.
 
 Server-side provider calls use a shared `AbortController` timeout helper:
 
-* OpenAI vision, reasoning, and chat: 30 seconds.
-* Mapbox geocoding and directions: 10 seconds.
-* Secondary OSRM routing: 10 seconds.
+- OpenAI vision, reasoning, and chat: 30 seconds.
+- Google Places search and Google Routes: 10 seconds.
+- Secondary OSRM routing: 10 seconds.
 
 Provider failures are normalized into typed fallback or error responses; raw
 provider exceptions are never shown in the UI.
@@ -317,22 +318,27 @@ Environment contract (`.env.example` is authoritative):
 OPENAI_API_KEY=
 OPENAI_MODEL=gpt-4.1-mini
 
-# Browser-safe public token for Mapbox GL JS.
-NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN=
+# Browser-safe key for Google Maps JavaScript API.
+NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=
 
-# Server-only token for Mapbox destination search and walking directions.
-MAPBOX_ACCESS_TOKEN=
+# Optional map ID for Advanced Markers and custom map styling.
+NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID=
+
+# Server-only key for Google Places Text Search and Google Routes API.
+GOOGLE_MAPS_SERVER_API_KEY=
 
 # Optional secondary route provider. Set this only to a server configured with
 # a walking/foot profile; generic public demo endpoints do not guarantee it.
 OSRM_BASE_URL=
 ```
 
-`NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN` must be a Mapbox public token (`pk.`) and is
-expected to be visible in browser requests. `OPENAI_API_KEY` and any secret
-Mapbox token must remain server-only. In development, `.env.local` and `.env`
-take precedence over inherited shell values; production uses the deployment
-environment.
+`NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` is intentionally visible to browser requests
+and should be restricted to approved app origins in Google Cloud.
+`GOOGLE_MAPS_SERVER_API_KEY` and `OPENAI_API_KEY` must remain server-only; the
+server may use the public key only for local/demo compatibility. Enable Google
+Maps JavaScript API, Places API (New), and Routes API for the project. In
+development, `.env.local` and `.env` take precedence over inherited shell
+values; production uses the deployment environment.
 
 ---
 
@@ -342,9 +348,9 @@ environment.
 
 Preferred because:
 
-* Faster installs
-* Efficient disk usage
-* Reliable lockfile
+- Faster installs
+- Efficient disk usage
+- Reliable lockfile
 
 Use one package manager consistently throughout the project.
 
@@ -379,11 +385,11 @@ demo with real environment variables.
 
 Reasons
 
-* Zero configuration
-* Excellent Next.js support
-* Fast deployments
-* Serverless API routes
-* Edge-ready
+- Zero configuration
+- Excellent Next.js support
+- Fast deployments
+- Serverless API routes
+- Edge-ready
 
 Deployment should happen from the main branch.
 
@@ -456,7 +462,7 @@ PascalCase
 Example
 
 ```tsx
-RecommendationCard.tsx
+RecommendationCard.tsx;
 ```
 
 ---
@@ -466,7 +472,7 @@ Hooks
 camelCase
 
 ```tsx
-useCamera.ts
+useCamera.ts;
 ```
 
 ---
@@ -476,7 +482,7 @@ Services
 camelCase
 
 ```tsx
-visionService.ts
+visionService.ts;
 ```
 
 ---
@@ -486,7 +492,7 @@ Types
 PascalCase
 
 ```tsx
-Recommendation.ts
+Recommendation.ts;
 ```
 
 ---
@@ -501,11 +507,11 @@ UPPER_SNAKE_CASE
 
 Every service must handle:
 
-* Network failures
-* Invalid AI output
-* Empty responses
-* Timeouts
-* Permission failures
+- Network failures
+- Invalid AI output
+- Empty responses
+- Timeouts
+- Permission failures
 
 Never expose raw errors to users.
 
@@ -523,9 +529,9 @@ Minimal logs.
 
 Never log:
 
-* API keys
-* Sensitive data
-* User images
+- API keys
+- Sensitive data
+- User images
 
 ---
 
@@ -533,11 +539,11 @@ Never log:
 
 The application must support:
 
-* Keyboard navigation
-* Proper contrast
-* Screen readers
-* Semantic HTML
-* Focus management
+- Keyboard navigation
+- Proper contrast
+- Screen readers
+- Semantic HTML
+- Focus management
 
 Accessibility is a core requirement, not a future enhancement.
 
@@ -571,17 +577,17 @@ Animations
 
 Do **not** introduce:
 
-* Redux
-* Zustand
-* Docker
-* Express
-* Spring Boot
-* Prisma
-* MongoDB
-* Redis
-* RabbitMQ
-* Kubernetes
-* Microservices
+- Redux
+- Zustand
+- Docker
+- Express
+- Spring Boot
+- Prisma
+- MongoDB
+- Redis
+- RabbitMQ
+- Kubernetes
+- Microservices
 
 These technologies are unnecessary for the hackathon MVP and increase implementation complexity.
 
@@ -591,16 +597,16 @@ These technologies are unnecessary for the hackathon MVP and increase implementa
 
 Potential additions after the hackathon:
 
-* Supabase
-* PostgreSQL
-* Voice APIs
-* Weather APIs
-* Transit APIs
-* Real-time event streaming
-* AI memory
-* Authentication
-* Monitoring
-* Analytics
+- Supabase
+- PostgreSQL
+- Voice APIs
+- Weather APIs
+- Transit APIs
+- Real-time event streaming
+- AI memory
+- Authentication
+- Monitoring
+- Analytics
 
 These additions should not require major architectural changes.
 
@@ -610,12 +616,12 @@ These additions should not require major architectural changes.
 
 Before introducing any new dependency, verify:
 
-* Does it solve a real problem?
-* Can existing technologies already solve it?
-* Does it improve the MVP?
-* Does it reduce development time?
-* Does it keep the architecture simple?
-* Is it production-ready?
+- Does it solve a real problem?
+- Can existing technologies already solve it?
+- Does it improve the MVP?
+- Does it reduce development time?
+- Does it keep the architecture simple?
+- Is it production-ready?
 
 If the answer to any of these questions is "no," do not add the dependency.
 

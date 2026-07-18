@@ -22,13 +22,13 @@ This document is the authoritative reference for architectural decisions.
 
 The architecture should prioritize:
 
-* Simplicity
-* Fast development
-* Maintainability
-* AI-first workflows
-* Separation of concerns
-* Easy deployment
-* Scalability after the hackathon
+- Simplicity
+- Fast development
+- Maintainability
+- AI-first workflows
+- Separation of concerns
+- Easy deployment
+- Scalability after the hackathon
 
 ---
 
@@ -65,7 +65,7 @@ Next.js API Routes
  │
  ├──────────────┐
  ▼              ▼
-OpenAI API   Mapbox / OSRM APIs
+OpenAI API   Google Maps Platform / OSRM APIs
  │              │
  └──────┬───────┘
         ▼
@@ -86,21 +86,21 @@ UI Rendering
 
 Responsibilities
 
-* UI
-* Camera
-* Image upload
-* Chat
-* Maps
-* Animations
-* Persona selection
+- UI
+- Camera
+- Image upload
+- Chat
+- Maps
+- Animations
+- Persona selection
 
 Technology
 
-* Next.js
-* React
-* Tailwind
-* shadcn/ui
-* Framer Motion
+- Next.js
+- React
+- Tailwind
+- shadcn/ui
+- Framer Motion
 
 ---
 
@@ -108,15 +108,15 @@ Technology
 
 Responsibilities
 
-* Validate requests
-* Call AI
-* Call Maps
-* Merge responses
-* Return structured output
+- Validate requests
+- Call AI
+- Call Maps
+- Merge responses
+- Return structured output
 
 Technology
 
-* Next.js Route Handlers
+- Next.js Route Handlers
 
 ---
 
@@ -124,36 +124,40 @@ Technology
 
 Responsibilities
 
-* Vision analysis
-* Urban reasoning
-* Persona reasoning
-* Recommendation generation
-* Structured JSON output
+- Vision analysis
+- Urban reasoning
+- Persona reasoning
+- Recommendation generation
+- Structured JSON output
 
 Technology
 
-* OpenAI Responses API
+- OpenAI Responses API
 
 ---
 
 ## External Services
 
-### Mapbox + OSRM
+### Google Maps Platform + OSRM
 
 Responsibilities
 
-* Mapbox GL JS renders the interactive browser map.
-* Mapbox Search Geocoding resolves a user-entered destination to coordinates.
-* Mapbox Directions provides the preferred walking-route geometry, distance,
-  duration, and turn steps.
-* A configured foot-profile OSRM endpoint is a secondary routing provider when
-  Mapbox Directions cannot return a usable route.
-* `services/mapService.ts` isolates provider payloads and exposes only shared
+- Google Maps JavaScript API renders the interactive browser map.
+- Google Places API (New) Text Search resolves a user-entered destination to
+  coordinates.
+- Google Routes API Compute Routes provides the preferred walking-route
+  geometry, distance, duration, and turn steps.
+- A configured foot-profile OSRM endpoint is a secondary routing provider when
+  Google Routes cannot return a usable route.
+- `services/mapService.ts` isolates provider payloads and exposes only shared
   typed destination and route contracts to the rest of the app.
 
-Map rendering uses `NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN`; server-side destination
-geocoding uses `MAPBOX_ACCESS_TOKEN`. OSRM is configurable with
-`OSRM_BASE_URL` configures the optional secondary foot-routing provider.
+Map rendering uses `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`; an optional
+`NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID` enables Advanced Markers and custom map
+styling. Server-side destination search and routing use
+`GOOGLE_MAPS_SERVER_API_KEY`, falling back to the public key only for local/demo
+compatibility. `OSRM_BASE_URL` configures the optional secondary foot-routing
+provider.
 
 ---
 
@@ -161,10 +165,10 @@ geocoding uses `MAPBOX_ACCESS_TOKEN`. OSRM is configurable with
 
 Responsibilities
 
-* Vision
-* Reasoning
-* Tool calling
-* Structured outputs
+- Vision
+- Reasoning
+- Tool calling
+- Structured outputs
 
 ---
 
@@ -206,11 +210,11 @@ Every major UI element should be reusable.
 
 Examples
 
-* Camera Card
-* Chat Bubble
-* Recommendation Card
-* Persona Selector
-* Map Panel
+- Camera Card
+- Chat Bubble
+- Recommendation Card
+- Persona Selector
+- Map Panel
 
 ---
 
@@ -251,17 +255,17 @@ Frontend Rendering
 
 Responsible for
 
-* Rendering
-* User interaction
-* Animations
-* Accessibility
-* State display
+- Rendering
+- User interaction
+- Animations
+- Accessibility
+- State display
 
 Must NOT
 
-* Call AI directly
-* Contain prompts
-* Contain business logic
+- Call AI directly
+- Contain prompts
+- Contain business logic
 
 ---
 
@@ -269,10 +273,10 @@ Must NOT
 
 Responsible for
 
-* Request validation
-* Orchestration
-* Data transformation
-* Error handling
+- Request validation
+- Orchestration
+- Data transformation
+- Error handling
 
 ---
 
@@ -280,10 +284,10 @@ Responsible for
 
 Responsible for
 
-* Image understanding
-* Context merging
-* Persona reasoning
-* Decision generation
+- Image understanding
+- Context merging
+- Persona reasoning
+- Decision generation
 
 ---
 
@@ -291,10 +295,10 @@ Responsible for
 
 Responsible for
 
-* Directions
-* Places
-* Geocoding
-* Visualization
+- Directions
+- Places
+- Geocoding
+- Visualization
 
 The map layer does not infer accessibility from a persona. It exposes provider
 status, route status, and evidence separately so the UI can distinguish a
@@ -386,16 +390,16 @@ Destination coordinates, destinationQuery, or destination language in a prompt
 Typed destination resolution
   resolved | missing | unavailable | not-found
         |
-        +-- resolved --> Mapbox Directions walking --> OSRM secondary --> RouteSummary
+        +-- resolved --> Google Routes walking --> OSRM secondary --> RouteSummary
         |
         +-- otherwise --> no fabricated route; actionable resolution message
 ```
 
 Explicit coordinates win over a text query. A text query is resolved through
-Mapbox only when a server token is configured. `RouteSummary` carries the
-origin, destination, GeoJSON line, normalized route points, metrics, steps,
-provider source (`mapbox`, `osrm`, or `fallback`), status (`routed` or
-`estimated`), and
+Google Places API (New) Text Search only when a Google Maps key is configured.
+`RouteSummary` carries the origin, destination, GeoJSON line, normalized route
+points, metrics, steps, provider source (`google`, `osrm`, or `fallback`),
+status (`routed` or `estimated`), and
 accessibility evidence/warnings. The route always represents a walking route;
 it is never called step-free or accessible unless trusted evidence explicitly
 verifies that claim.
@@ -456,18 +460,19 @@ Shared TypeScript types.
 
 The architecture should gracefully recover from:
 
-* OpenAI failures
-* Invalid images
-* Map failures
-* Slow responses
-* Network issues
+- OpenAI failures
+- Invalid images
+- Map failures
+- Slow responses
+- Network issues
 
 Users should always receive actionable feedback.
 
 All provider calls use `AbortController`-based timeouts. Vision, reasoning, and
-chat allow up to 30 seconds; Mapbox geocoding and routing allow up to 10
-seconds. The configured OSRM secondary route provider also has a 10-second
-limit. A timeout follows the same recovery policy as another provider failure,
+chat allow up to 30 seconds; Google Places search and Google Routes requests
+allow up to 10 seconds. The configured OSRM secondary route provider also has a
+10-second limit. A timeout follows the same recovery policy as another provider
+failure,
 without leaking provider details to the user.
 
 ## MVP Fallback Mode
@@ -477,14 +482,14 @@ credentials are missing or an external provider fails.
 
 Fallback behavior applies to:
 
-* OpenAI vision analysis, urban reasoning, and chat follow-ups.
-* Mapbox Directions walking requests, followed by a configured foot-profile
+- OpenAI vision analysis, urban reasoning, and chat follow-ups.
+- Google Routes walking requests, followed by a configured foot-profile
   OSRM endpoint when the primary route provider fails.
-* Mapbox GL browser rendering, where a local route visual preserves the rest of
+- Google Maps JavaScript API browser rendering, where a local route visual preserves the rest of
   the workflow.
 
 Fallback responses still follow the same typed response contracts and never
-invent confirmed infrastructure. If Mapbox cannot resolve a textual destination,
+invent confirmed infrastructure. If Google Places cannot resolve a textual destination,
 CityMind returns the typed resolution status and does not create a route to a
 guessed location. If both live route providers fail after a destination
 resolves, the route is marked as an estimated fallback and its warnings make
@@ -498,13 +503,13 @@ Future additions should require minimal architectural changes.
 
 Examples
 
-* Voice input
-* Weather API
-* Transit APIs
-* Crowd prediction
-* Multi-agent reasoning
-* Memory
-* User profiles
+- Voice input
+- Weather API
+- Transit APIs
+- Crowd prediction
+- Multi-agent reasoning
+- Memory
+- User profiles
 
 The architecture should allow these to be added without rewriting existing modules.
 
@@ -512,21 +517,21 @@ The architecture should allow these to be added without rewriting existing modul
 
 # Security Principles
 
-* API keys remain server-side.
-* Input validation on every request.
-* Images are never permanently stored in the MVP.
-* Prompt injection attempts should be sanitized where practical.
-* Client should never access private service credentials.
+- API keys remain server-side.
+- Input validation on every request.
+- Images are never permanently stored in the MVP.
+- Prompt injection attempts should be sanitized where practical.
+- Client should never access private service credentials.
 
 ---
 
 # Performance Goals
 
-* Minimal client-side JavaScript.
-* Lazy-load heavy UI.
-* Stream AI responses when possible.
-* Optimize image uploads.
-* Avoid duplicate API requests.
+- Minimal client-side JavaScript.
+- Lazy-load heavy UI.
+- Stream AI responses when possible.
+- Optimize image uploads.
+- Avoid duplicate API requests.
 
 ---
 
@@ -545,7 +550,7 @@ Vercel
 
 ├── OpenAI
 
-└── Mapbox / OSRM
+└── Google Maps Platform / OSRM
 ```
 
 Single deployment.
@@ -558,13 +563,13 @@ No separate backend servers.
 
 The MVP intentionally avoids:
 
-* Microservices
-* Docker
-* Message queues
-* Redis
-* Background workers
-* Complex databases
-* Authentication systems
+- Microservices
+- Docker
+- Message queues
+- Redis
+- Background workers
+- Complex databases
+- Authentication systems
 
 These are unnecessary for the hackathon objective and would increase implementation time.
 
@@ -574,12 +579,12 @@ These are unnecessary for the hackathon objective and would increase implementat
 
 Before adding any new module, verify:
 
-* Does it fit the layered architecture?
-* Does it have a single responsibility?
-* Does it duplicate existing functionality?
-* Does it improve the Vision + Urban Reasoning workflow?
-* Can it be reused?
-* Does it keep the MVP focused?
+- Does it fit the layered architecture?
+- Does it have a single responsibility?
+- Does it duplicate existing functionality?
+- Does it improve the Vision + Urban Reasoning workflow?
+- Can it be reused?
+- Does it keep the MVP focused?
 
 If any answer is "no", redesign before implementation.
 

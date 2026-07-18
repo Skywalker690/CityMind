@@ -2,596 +2,332 @@
 
 **Project:** CityMind
 
-**Version:** 1.0
+**Version:** 1.2
 
-**Status:** Design Specification
+**Status:** Skeuomorphic Accessibility-First Design Specification
 
 ---
 
 # Purpose
 
-This document defines the complete visual language of CityMind.
-
-Every screen, component, animation, spacing rule, typography choice, color, and interaction should follow this document.
-
-The goal is to make CityMind feel like one cohesive product rather than a collection of pages.
+This document defines the visual language for CityMind: its staged workspace,
+color tokens, surfaces, typography, spacing, interactive states, and motion.
+Every screen and component must feel like part of one calm urban-assistance
+product rather than a collection of disconnected dashboard cards.
 
 ---
 
-# Design Philosophy
+# Design Direction
 
 CityMind should feel:
 
-* Intelligent
-* Calm
-* Modern
-* Premium
-* Minimal
-* Trustworthy
+- Intelligent
+- Calm
+- Premium
+- Minimal
+- Tactile
+- Trustworthy
 
-The interface should communicate confidence.
+The UI uses **restrained skeuomorphism** inspired by soft, physical controls:
+cool-toned canvas surfaces, gently raised panels, inset review areas, and
+controls that visibly press when activated. This is a visual and interaction
+language, not a decorative style exercise. It should orient a user through one
+decision at a time.
 
-The user should focus on the AI, not the UI.
-
----
-
-# Design Principles
-
-Every screen should satisfy:
-
-* Minimal cognitive load
-* Strong visual hierarchy
-* Consistent spacing
-* Smooth motion
-* Accessibility
-* Mobile-first
-* Desktop optimized
+Skeuomorphic effects must never reduce legibility, hide an affordance, or be
+the only signal for a state. Text labels, icons where useful, semantic color,
+visible focus, and native control behavior remain mandatory.
 
 ---
 
-# Visual Identity
+# Experience Structure
 
-CityMind represents urban intelligence.
+The desktop shell contains a tactile step rail beside one active, raised
+workspace. The active workspace presents exactly one of these stages:
 
-The design should combine:
+```text
+01 Capture -> 02 Confirm -> 03 Ask -> 04 Act
+```
 
-* AI
-* Maps
-* Navigation
-* Spatial awareness
+The stage number, label, descriptive copy, completed icon, disabled state, and
+header status all reinforce progression. The user should not see a dense
+three-column dashboard containing a camera, form, map, and chat at once.
 
-The visual language should communicate intelligence without appearing futuristic or overly technical.
-
----
-
-# Color Palette
-
-## Primary
-
-Blue
-
-Purpose
-
-* Primary actions
-* AI highlights
-* Links
-* Active elements
+On smaller viewports, the rail appears before the active workspace. Stages
+continue to use the same hierarchy; the design must not turn mobile into a
+long page of simultaneous panels.
 
 ---
 
-## Secondary
+# Color System
 
-Slate
+Colors are semantic tokens rather than component-local values. The current
+light theme is a quiet blue-slate canvas with a high-contrast ink color:
 
-Purpose
+| Token role        | Light intent             | Dark intent                  | Use                                                    |
+| ----------------- | ------------------------ | ---------------------------- | ------------------------------------------------------ |
+| Background        | Blue-gray canvas         | Deep blue-slate canvas       | Page and inset background.                             |
+| Card              | Lifted pale blue surface | Lifted charcoal-blue surface | Workspace and raised panels.                           |
+| Foreground        | Deep navy ink            | Near-white ink               | Primary text and icons.                                |
+| Primary           | Clear CityMind blue      | Lighter CityMind blue        | Primary action, active state, focus-adjacent emphasis. |
+| Secondary / muted | Soft slate               | Deep muted slate             | Subtle supporting surfaces and metadata.               |
+| Accent            | Emerald                  | Brighter emerald             | Confirmed or success states only.                      |
+| Warning           | Amber                    | Amber                        | Verification and uncertainty.                          |
+| Destructive       | Red                      | Red                          | Error and irreversible-risk states.                    |
 
-* Navigation
-* Cards
-* Backgrounds
+The token system includes background, foreground, card, popover, primary,
+secondary, muted, accent, destructive, border, input, ring, and shared
+skeuomorphic-shadow values. Components must consume those tokens so light and
+dark mode retain the same hierarchy.
 
----
-
-## Accent
-
-Emerald
-
-Purpose
-
-* Success
-* Recommendations
-* Confirmed or live route state
-
----
-
-## Warning
-
-Amber
-
-Purpose
-
-* Warnings
-* Accessibility notices
+Blue distinguishes CityMind actions; it never proves a route is accessible.
+Emerald indicates a completed or positive state, not a guarantee about urban
+infrastructure. Amber communicates uncertainty, estimation, or a required
+verification step.
 
 ---
 
-## Danger
+# Surface Language
 
-Red
+## Raised Surfaces
 
-Purpose
+Use raised surfaces for the app workspace, step rail, stage cards, and primary
+interactive controls. They use a subtle light-to-card gradient, a fine border,
+and paired soft shadows that imply elevation from the surrounding canvas.
 
-* Errors
-* Blocked routes
+Examples:
 
----
+- The workflow rail.
+- The active stage workspace.
+- A recommendation, question, or persona panel.
+- Primary buttons and control groups.
 
-## Background
+## Inset Surfaces
 
-Light
+Use inset surfaces for review, status, photo framing, location state, and
+secondary information that should feel contained rather than elevated. They use
+inner shadows and a quieter background.
 
-* White
-* Light Gray
+Examples:
 
-Dark
+- Selected-scene image frame.
+- Step-rail context note.
+- Location status.
+- Input wells and progress areas.
 
-* Near Black
-* Dark Slate
+## Pressed Surfaces
 
-Both themes are implemented with the shared CSS token set. The header theme
-toggle adds or removes the `dark` class on the document root for the current
-session; it is intentionally a low-friction local preference rather than a
-stored user account setting.
+Interactive controls may move by a very small distance and exchange raised
+shadow for inset shadow while pressed. This supports tactile feedback but must
+not replace the standard active, selected, disabled, or focus states.
+
+Avoid heavy shadows, high-contrast bevels, glass glare, ornamental texture, or
+photorealistic objects. The result should be soft and modern, not nostalgic or
+visually noisy.
 
 ---
 
 # Typography
 
-Primary Font
+Use Geist as the primary typeface with Inter and the system sans-serif stack as
+fallbacks.
 
-Geist
+| Level           | Role                                    | Guidance                                            |
+| --------------- | --------------------------------------- | --------------------------------------------------- |
+| Stage heading   | Orient the current decision             | Large, semibold, high contrast.                     |
+| Section heading | Group one active-stage area             | Semibold and concise.                               |
+| Body            | Explain a recommendation or next action | Comfortable line height and restrained width.       |
+| Label           | Name an input or control                | Medium weight; never supplied by placeholder alone. |
+| Metadata        | Status, source, route detail            | Smaller but still contrast-compliant.               |
 
-Fallback
-
-Inter
-
-System Sans
-
----
-
-## Heading
-
-Bold
-
-Large
-
-High contrast
+Uppercase tracked labels are reserved for compact stage eyebrows and must
+remain readable at their displayed size. Do not use light gray text for
+essential instructions.
 
 ---
 
-## Body
+# Spacing, Radius, and Layout
 
-Regular
-
-Comfortable reading width
-
----
-
-## Caption
-
-Small
-
-Muted
-
----
-
-# Spacing System
-
-Use an 8-point spacing system.
-
-Allowed values
+Use a 4-point spacing rhythm, favoring:
 
 ```text
-4
-
-8
-
-12
-
-16
-
-24
-
-32
-
-40
-
-48
-
-64
+4, 8, 12, 16, 20, 24, 32, 40, 48, 64
 ```
 
-Avoid arbitrary spacing values.
+The workflow shell uses generous whitespace so each stage feels like a focused
+moment. Nested surfaces should have a clear spacing relationship and should not
+create a stack of equally heavy cards.
+
+Use generous but purposeful radii:
+
+- Workspace and rail: approximately 30-34 px.
+- Stage panels and image frames: approximately 24-30 px.
+- Controls and step rows: approximately 16-22 px.
+- Status chips: fully rounded where the compact shape improves scanning.
+
+Desktop uses a narrow sticky rail beside a flexible workspace. Tablet and
+mobile stack the layout in reading order and preserve a safe bottom margin for
+touch interaction.
 
 ---
 
-# Border Radius
+# Workflow Components
 
-Cards
+## Step Rail
 
-Large
+The step rail is a raised surface with four numbered controls. Each row must
+show:
 
-Buttons
+- Number or completion icon.
+- Stage label and short description.
+- Current state via text position and `aria-current`.
+- Disabled state for unavailable future stages.
 
-Medium
+An active row is visibly raised and carries primary-color emphasis. A completed
+row carries a check icon. A disabled row has lower visual prominence but still
+remains legible enough to explain the future workflow.
 
-Inputs
+## Capture
 
-Medium
+Capture uses a focused camera/upload surface. Once an image is selected, it is
+shown in a softly inset frame alongside a clear Continue to confirm action.
+Replacement remains available. Selecting a photo never visually implies that
+analysis has started.
 
-Badges
+## Confirm
 
-Full
+Confirm pairs the selected image with a context surface for persona and
+optional location. The Analyze this scene action is the visual culmination of
+the step. Analysis progress is an explicit status layer over the preview, not a
+decorative shimmer.
 
-Maintain consistency.
+## Ask
 
----
+Ask presents a scene summary next to a raised question surface. The question is
+the visual priority; the optional destination is adjacent supporting context.
+Suggested prompts are tactile chips with clear button semantics.
 
-# Shadows
+## Act
 
-Three elevation levels.
-
-Low
-
-Cards
-
-Medium
-
-Floating panels
-
-High
-
-Dialogs
-
-Avoid excessive shadows.
-
----
-
-# Layout Principles
-
-Maximum content width
-
-Readable.
-
-Centered.
-
-Generous whitespace.
-
-Avoid dense interfaces.
+Act presents the recommendation before supporting route context and follow-up
+chat. The route panel and chat sit in their own raised surfaces; map failure
+does not leave an empty dark rectangle or hide textual route information.
 
 ---
 
-# Grid
+# Controls and State
 
-Desktop
+## Buttons
 
-12-column
+- **Primary:** Blue, raised, and used for the one next action in a stage.
+- **Secondary / outline:** Used for replacement, back, and optional actions.
+- **Ghost:** Used for compact, low-emphasis controls such as theme change.
+- **Disabled:** Clearly inactive in both text and shape; do not imply it can be
+  pressed.
+- **Pressed:** Small position and shadow change only; no motion if reduced
+  motion is enabled.
 
-Tablet
+Every button needs visible label or accessible name. Icon-only buttons require
+an explicit accessible label and tooltip-equivalent title where useful.
 
-8-column
+## Inputs
 
-Mobile
+Inputs and textareas use calm inset wells with a visible border/ring on focus.
+Labels remain visible when fields are populated. Placeholders give examples,
+not required instructions. Error text is adjacent to the associated field and
+announced appropriately.
 
-4-column
+## Chips and Badges
 
----
-
-# Cards
-
-Cards should contain:
-
-* Title
-* Description
-* Content
-* Optional action
-
-Padding should remain consistent.
-
----
-
-# Buttons
-
-Primary
-
-Filled
+Chips are compact, raised controls or status indicators. Suggested prompts are
+buttons, not decorative tags. Badges use both text and color to communicate
+status.
 
 ---
 
-Secondary
+# AI, Route, and Map Presentation
 
-Outlined
+AI-generated content should have a clear structure: summary, recommendation,
+reason, benefits, confidence/uncertainty, and next action. It must never be
+rendered as raw model output.
 
----
+Google Maps JavaScript API displays origin/destination markers, a walking-route
+polyline, route status, distance, duration, and turn summary when the browser
+can initialize it. The map exposes standard zoom, map-type, fullscreen, and
+Street View controls; an optional map ID enables Advanced Markers and custom
+styling. A live route is visually distinct from an estimated fallback route.
+Neither style asserts step-free accessibility. Route source, status, and
+accessibility verification notes remain readable in text alongside the visual
+map.
 
-Ghost
-
-Transparent
-
----
-
-Danger
-
-Red
-
----
-
-Disabled
-
-Muted
-
-Buttons should clearly indicate interaction state.
-
----
-
-# Icons
-
-Use Lucide React only.
-
-Icons should remain:
-
-* Simple
-* Consistent
-* Minimal
-
-Avoid mixing icon libraries.
+When Google Maps cannot initialize, use the local visual fallback and retain the
+same textual route metrics and instructions. Do not disguise provider failure
+with a decorative empty map surface.
 
 ---
 
 # Motion
 
-Use Framer Motion.
+Use Framer Motion for one purpose: orientation.
 
-Animations should communicate:
+- Active-stage entry can fade and rise slightly.
+- Analysis and status feedback may communicate ongoing work.
+- Pressed controls can use a short, subtle transform.
+- No perpetual decorative animation, bouncing, or parallax.
 
-* State
-* Progress
-* Focus
-
-Not decoration.
-
----
-
-# Implemented Motion
-
-* A restrained fade-and-rise entrance for onboarding and guidance content.
-* Analysis steps and explicit workflow-status changes instead of decorative
-  motion.
-* Smooth focus scrolling only when the user has not requested reduced motion.
-
-The global reduced-motion media query reduces animation and scrolling duration.
+The default stage transition is brief and should not make the user wait. The
+global reduced-motion preference removes positional animation and smooth scroll
+behavior.
 
 ---
 
-# AI Components
+# Themes
 
-AI-generated content should have a distinct appearance.
+Light and dark modes share the same semantic token names and tactile hierarchy.
+The first visit honors the device color preference; a manual toggle is stored
+locally in the browser and restored on later visits. It is not user-account
+data.
 
-Examples
-
-* AI badge
-* Thinking indicator
-* Confidence score
-* Recommendation card
-
-These should visually distinguish AI output from user input.
+Dark mode uses quieter paired shadows, subtle borders, and sufficient text
+contrast. Never copy light-mode white highlights into dark mode at a brightness
+that causes glare or makes focus state unclear.
 
 ---
 
-# Recommendation Cards
+# Accessibility Requirements
 
-Each recommendation card should contain:
+The soft visual style creates specific accessibility risks, so every component
+must satisfy all of the following:
 
-* Title
-* Recommendation
-* Explanation
-* Benefits
-* Confidence
-* Optional CTA
-
-Cards should prioritize readability.
-
----
-
-# Chat UI
-
-Messages
-
-Rounded
-
-Comfortable spacing
-
-Clear sender distinction
-
-Visible sending state
-
-Multiline input and suggested prompts
-
-CityMind currently returns complete structured chat replies rather than token
-streaming. The sending state must never pretend that a response is streaming.
+- WCAG AA-aware contrast for text, controls, and focus rings.
+- Keyboard operation for the step rail, all forms, map controls, and chat.
+- Visible focus that is stronger than a shadow-only cue.
+- Semantic headings, forms, buttons, lists, labels, and status text.
+- Screen-reader labels for icon-only controls, camera, map, and route state.
+- At least comfortably touchable target sizes; do not create tiny ornamental
+  controls.
+- State communicated through text/icon/position as well as color and depth.
+- Reduced-motion support.
+- Textual route metrics and instructions when the map canvas is unavailable.
 
 ---
 
-# Camera UI
-
-Camera should provide:
-
-* Live preview
-* Capture button
-* Upload option
-* Repeatable demo-scene option
-* Selected-image preview
-* Explicit "Confirm and analyze" action
-* Retake
-* Loading overlay
-
-Selecting an image is a review state, not permission to send it to AI. The
-confirmation affordance must remain visually dominant until analysis begins.
-
----
-
-# Map UI
-
-Mapbox GL should display:
-
-* Current location and resolved destination markers
-* Walking-route GeoJSON and route status
-* Distance, duration, walking mode, and turn summary
-* Minimal navigation and recenter controls
-* An explicit accessibility-verification notice
-
-Blue communicates a live routed walk; amber communicates an estimated fallback
-route. Neither color makes an accessibility claim. If Mapbox cannot initialize,
-the map panel must keep the route metrics and text instructions visible and
-replace the interactive canvas with an accessible local visual fallback.
-
----
-
-# Loading States
-
-Every async component requires:
-
-* A visible loading surface or progress indicator
-* A success state
-* A recovery path when it fails
-
-The app shell uses a route-level skeleton, the camera shows analysis steps, the
-chat panel shows its sending state, and the map announces loading separately.
-Never leave blank space.
-
----
-
-# Empty States
-
-Empty states should:
-
-Explain
-
-Guide
-
-Encourage action
-
-Example
-
-"No image selected yet.
-
-Capture your surroundings to begin."
-
----
-
-# Error States
-
-Error screens should:
-
-Explain the issue.
-
-Provide recovery actions.
-
-Never expose technical details.
-
-Workflow errors use a reusable ErrorState with a retry action that preserves
-the right prior context. The framework-level error boundary uses the same calm
-language and offers both retry and return-home actions.
-
----
-
-# Accessibility
-
-Support:
-
-* WCAG AA contrast
-* Keyboard navigation
-* Screen readers
-* Focus indicators
-* Reduced motion preferences
-
-The interactive map has an accessible label and status messaging, while its
-route metrics and instructions remain available as a text alternative. Focus
-movement initiated by recommendation actions must land on the corresponding map
-or conversation section.
-
-Accessibility is mandatory.
-
----
-
-# Responsive Design
-
-The application should support:
-
-Desktop
-
-Tablet
-
-Mobile
-
-Landscape
-
-Portrait
-
-The same experience should remain intuitive across devices.
-
----
-
-# Theme Support
-
-Light and dark modes share semantic CSS color tokens for backgrounds, cards,
-foregrounds, borders, focus rings, warnings, and recommendations. The visible
-header control has an explicit accessible label that describes the destination
-theme. The app starts in light mode and does not persist a preference across a
-full reload in the MVP.
-
----
-
-# Design Tokens
-
-All colors, spacing, typography, shadows, radii, and motion durations should be centralized as reusable design tokens.
-
-Avoid hardcoded values inside components.
-
----
-
-# Component Consistency
-
-Every component should use:
-
-* Shared typography
-* Shared spacing
-* Shared colors
-* Shared radius
-* Shared shadows
-
-No component should define its own visual language.
-
----
-
-# Design Review Checklist
-
-Before approving a screen:
-
-* Consistent spacing
-* Proper hierarchy
-* Accessible colors
-* Responsive layout
-* Reusable components
-* Smooth motion
-* Clear call-to-action
-* No unnecessary visual noise
-
----
-
-# Guiding Principle
-
-CityMind should feel less like a hackathon project and more like a polished production product.
-
-Every pixel should reinforce clarity, trust, and intelligence.
-
-A user should be able to recognize any screen as part of CityMind without seeing the logo because the visual language remains consistent throughout the application.
+# Token and Component Rules
+
+Colors, radii, shadows, typography, spacing, and motion values belong in shared
+tokens or reusable primitives. A feature component may choose a documented
+surface pattern but must not invent a private visual language.
+
+Every screen review must verify:
+
+- Clear current stage and primary action.
+- No simultaneous dashboard overload.
+- Calm, restrained tactile depth.
+- Strong contrast and focus visibility.
+- Responsive reading order.
+- Empty, loading, error, and disabled states.
+- Honest route and accessibility communication.
+- No unnecessary visual noise.
+
+The guiding principle is simple: every pixel should make the next urban
+decision easier to understand and act on.

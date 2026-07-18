@@ -14,12 +14,12 @@ This document defines the official repository structure of CityMind.
 
 It specifies:
 
-* Folder responsibilities
-* File organization
-* Naming conventions
-* Module ownership
-* Import rules
-* Dependency flow
+- Folder responsibilities
+- File organization
+- Naming conventions
+- Module ownership
+- Import rules
+- Dependency flow
 
 The goal is to maintain a clean, scalable, and AI-friendly codebase.
 
@@ -31,12 +31,12 @@ This document is the single source of truth for repository organization.
 
 The repository should be:
 
-* Predictable
-* Modular
-* Easy to navigate
-* AI-friendly
-* Feature-oriented
-* Scalable
+- Predictable
+- Modular
+- Easy to navigate
+- AI-friendly
+- Feature-oriented
+- Scalable
 
 Every folder should have one clear responsibility.
 
@@ -107,9 +107,9 @@ handlers validate input, delegate to services, and return shared API envelopes.
 
 Rules
 
-* No prompt definitions.
-* Keep pages thin.
-* Do not put provider logic in route handlers.
+- No prompt definitions.
+- Keep pages thin.
+- Do not put provider logic in route handlers.
 
 ---
 
@@ -143,17 +143,18 @@ components/
 
 Responsibilities
 
-* Presentation and accessible interaction forwarding
-* Reusable and typed
-* Local visual state where needed (for example, Mapbox lifecycle)
+- Presentation and accessible interaction forwarding
+- Reusable and typed
+- Local visual state where needed (for example, Google Maps lifecycle)
 
 ---
 
 Never place API logic here.
 
-`components/map/InteractiveMap.tsx` owns Mapbox GL lifecycle, markers, and
-GeoJSON rendering only. It receives the normalized `RouteSummary` from above;
-destination search and directions stay in `services/mapService.ts`.
+`components/map/InteractiveMap.tsx` owns Google Maps JavaScript API lifecycle,
+markers, and normalized route rendering only. It receives the normalized
+`RouteSummary` from above; destination search and directions stay in
+`services/mapService.ts`.
 
 ---
 
@@ -180,11 +181,11 @@ services/
 
 Responsibilities
 
-* API communication
-* AI orchestration
-* Business rules
-* Response transformation
-* Provider fallback and timeout recovery
+- API communication
+- AI orchestration
+- Business rules
+- Response transformation
+- Provider fallback and timeout recovery
 
 ---
 
@@ -237,10 +238,10 @@ lib/
 
 Contains
 
-* Helper functions
-* Configuration
-* Validation
-* Formatting
+- Helper functions
+- Configuration
+- Validation
+- Formatting
 
 ---
 
@@ -270,10 +271,10 @@ prompts/
 
 Rules
 
-* One prompt per responsibility.
-* Markdown only.
-* Version controlled.
-* Never hardcode prompts in components.
+- One prompt per responsibility.
+- Markdown only.
+- Version controlled.
+- Never hardcode prompts in components.
 
 ---
 
@@ -328,12 +329,12 @@ Project knowledge base.
 
 Contains
 
-* PRD
-* Architecture
-* Features
-* APIs
-* Design System
-* Prompt Specifications
+- PRD
+- Architecture
+- Features
+- APIs
+- Design System
+- Prompt Specifications
 
 Documentation is treated as code.
 
@@ -356,13 +357,14 @@ Next.js API route handlers
 Services and prompt loader
         |
         v
-OpenAI / Mapbox / OSRM
+OpenAI / Google Maps Platform / OSRM
 ```
 
 `InteractiveMap` is the deliberate client-side exception: it dynamically loads
-Mapbox GL JS and uses only the public `NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN` to
-render a map. It does not call CityMind's server providers for geocoding or
-directions; those remain behind route handlers and `mapService.ts`.
+the Google Maps JavaScript API and uses only the public
+`NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` (plus an optional map ID) to render a map. It
+does not call CityMind's server providers for destination search or directions;
+those remain behind route handlers and `mapService.ts`.
 
 ---
 
@@ -394,16 +396,16 @@ Business logic must never depend on UI.
 
 May use
 
-* Hooks
-* Types
-* Utilities
+- Hooks
+- Types
+- Utilities
 
 Must NOT use
 
-* AI prompts
-* API keys
-* Server-only environment variables
-* Provider request logic
+- AI prompts
+- API keys
+- Server-only environment variables
+- Provider request logic
 
 ---
 
@@ -411,15 +413,15 @@ Must NOT use
 
 May use
 
-* Prompts
-* Types
-* Utilities
+- Prompts
+- Types
+- Utilities
 
 Must NOT use
 
-* React
-* JSX
-* UI Components
+- React
+- JSX
+- UI Components
 
 ---
 
@@ -427,8 +429,8 @@ Must NOT use
 
 May use
 
-* Types
-* Client-side API helpers
+- Types
+- Client-side API helpers
 
 Must NOT directly call OpenAI.
 
@@ -456,7 +458,7 @@ Components
 PascalCase
 
 ```tsx
-RecommendationCard.tsx
+RecommendationCard.tsx;
 ```
 
 ---
@@ -466,7 +468,7 @@ Hooks
 camelCase
 
 ```tsx
-useCamera.ts
+useCamera.ts;
 ```
 
 ---
@@ -476,7 +478,7 @@ Services
 camelCase
 
 ```tsx
-visionService.ts
+visionService.ts;
 ```
 
 ---
@@ -486,7 +488,7 @@ Type exports
 PascalCase
 
 ```tsx
-Recommendation.ts
+Recommendation.ts;
 ```
 
 ---
@@ -533,15 +535,15 @@ Preferred
 
 Examples
 
-* Button
-* Card
-* Badge
-* Avatar
-* LoadingSpinner
-* ErrorCard
-* AIResponse
-* RecommendationCard
-* PersonaSelector
+- Button
+- Card
+- Badge
+- Avatar
+- LoadingSpinner
+- ErrorCard
+- AIResponse
+- RecommendationCard
+- PersonaSelector
 
 These should be reusable throughout the application.
 
@@ -586,9 +588,9 @@ Whenever a folder structure changes:
 
 Update
 
-* README
-* PROJECT_STRUCTURE.md
-* SYSTEM_ARCHITECTURE.md
+- README
+- PROJECT_STRUCTURE.md
+- SYSTEM_ARCHITECTURE.md
 
 Documentation must always match the repository.
 
@@ -618,11 +620,11 @@ These should only be introduced when justified by product requirements.
 
 Before creating a new file:
 
-* Does a similar file already exist?
-* Does it belong in the correct folder?
-* Does it have a single responsibility?
-* Will another developer immediately understand its purpose?
-* Does it follow the naming conventions?
+- Does a similar file already exist?
+- Does it belong in the correct folder?
+- Does it have a single responsibility?
+- Will another developer immediately understand its purpose?
+- Does it follow the naming conventions?
 
 If any answer is "no," reconsider the structure.
 

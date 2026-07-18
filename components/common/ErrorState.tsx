@@ -28,9 +28,7 @@ export function ErrorState({
         <div className="min-w-0 flex-1">
           <p className="font-medium">CityMind needs another try</p>
           <p className="mt-1 text-sm opacity-90">{message}</p>
-          {retryDescription ? (
-            <p className="mt-2 text-sm opacity-90">{retryDescription}</p>
-          ) : null}
+          {retryDescription ? <p className="mt-2 text-sm opacity-90">{retryDescription}</p> : null}
           {onRetry ? (
             <Button
               type="button"

@@ -1,6 +1,7 @@
 "use client";
 
 import { AlertTriangle, RefreshCw } from "lucide-react";
+import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
 
@@ -29,7 +30,7 @@ export default function CityMindError({
             Try again
           </Button>
           <Button type="button" variant="outline" asChild>
-            <a href="/">Return to CityMind</a>
+            <Link href="/">Return to CityMind</Link>
           </Button>
         </div>
       </section>

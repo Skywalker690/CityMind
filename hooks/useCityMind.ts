@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { DEFAULT_LOCATION, SUGGESTED_PROMPTS } from "@/lib/constants";
 import { createId } from "@/lib/utils";
@@ -11,7 +11,7 @@ import type { PersonaId } from "@/types/persona";
 import type { ReasoningResult } from "@/types/recommendation";
 import type { VisionScene } from "@/types/vision";
 
-type WorkflowStatus =
+export type WorkflowStatus =
   | "idle"
   | "image-ready"
   | "analyzing"
@@ -57,13 +57,14 @@ export function useCityMind() {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [scene, setScene] = useState<VisionScene | null>(null);
   const [result, setResult] = useState<ReasoningResult | null>(null);
-  const [lastPrompt, setLastPrompt] = useState<string>(SUGGESTED_PROMPTS[0]);
+  const [lastPrompt, setLastPrompt] = useState<string>("");
   const [lastDestinationQuery, setLastDestinationQuery] = useState("");
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [retryAction, setRetryAction] = useState<RetryAction>(null);
 
-  const activeLocation = location ?? DEFAULT_LOCATION;
+  const workflowVersionRef = useRef(0);
+  const mapLocation = location ?? DEFAULT_LOCATION;
 
   const suggestedPrompts = useMemo(() => {
     if (!scene) {
@@ -80,6 +81,7 @@ export function useCityMind() {
 
   const analyzeSelectedImage = useCallback(
     async (file: File) => {
+      const requestVersion = ++workflowVersionRef.current;
       setStatus("analyzing");
       setError(null);
       setRetryAction(null);
@@ -88,40 +90,51 @@ export function useCityMind() {
 
       const formData = new FormData();
       formData.append("image", file);
-      formData.append("location", JSON.stringify(activeLocation));
+      if (location) {
+        formData.append("location", JSON.stringify(location));
+      }
 
       try {
         const data = await postForm<VisionApiData>("/api/vision", formData);
+
+        if (requestVersion !== workflowVersionRef.current) {
+          return;
+        }
+
         setScene(data.scene);
         setStatus("scene-ready");
       } catch (apiError) {
+        if (requestVersion !== workflowVersionRef.current) {
+          return;
+        }
+
         setError(getClientError(apiError));
         setRetryAction({ kind: "vision", file });
         setStatus("error");
       }
     },
-    [activeLocation]
+    [location]
   );
 
-  const selectImage = useCallback(
-    (file: File) => {
-      setImageFile(file);
-      setStatus("image-ready");
-      setError(null);
-      setRetryAction(null);
-      setScene(null);
-      setResult(null);
-      setChatMessages([]);
-      setImagePreview((current) => {
-        if (current) {
-          URL.revokeObjectURL(current);
-        }
+  const selectImage = useCallback((file: File) => {
+    workflowVersionRef.current += 1;
+    setImageFile(file);
+    setStatus("image-ready");
+    setError(null);
+    setRetryAction(null);
+    setScene(null);
+    setResult(null);
+    setChatMessages([]);
+    setLastPrompt("");
+    setLastDestinationQuery("");
+    setImagePreview((current) => {
+      if (current) {
+        URL.revokeObjectURL(current);
+      }
 
-        return URL.createObjectURL(file);
-      });
-    },
-    []
-  );
+      return URL.createObjectURL(file);
+    });
+  }, []);
 
   const confirmImage = useCallback(() => {
     if (!imageFile) {
@@ -134,6 +147,7 @@ export function useCityMind() {
   }, [analyzeSelectedImage, imageFile]);
 
   const clearImage = useCallback(() => {
+    workflowVersionRef.current += 1;
     setImageFile(null);
     setImagePreview((current) => {
       if (current) {
@@ -145,6 +159,8 @@ export function useCityMind() {
     setScene(null);
     setResult(null);
     setChatMessages([]);
+    setLastPrompt("");
+    setLastDestinationQuery("");
     setError(null);
     setRetryAction(null);
     setStatus("idle");
@@ -178,6 +194,7 @@ export function useCityMind() {
         ? `${trimmed}\n\nDestination: ${normalizedDestination}`
         : trimmed;
 
+      const requestVersion = ++workflowVersionRef.current;
       setStatus("reasoning");
       setError(null);
       setRetryAction(null);
@@ -189,9 +206,14 @@ export function useCityMind() {
           scene,
           persona: nextPersona,
           userPrompt,
-          location: activeLocation,
+          location,
           destinationQuery: normalizedDestination || undefined
         });
+
+        if (requestVersion !== workflowVersionRef.current) {
+          return;
+        }
+
         setResult(reasoning);
         setStatus("ready");
 
@@ -214,6 +236,10 @@ export function useCityMind() {
           ]);
         }
       } catch (apiError) {
+        if (requestVersion !== workflowVersionRef.current) {
+          return;
+        }
+
         setError(getClientError(apiError));
         setRetryAction({
           kind: "reasoning",
@@ -225,7 +251,7 @@ export function useCityMind() {
         setStatus("error");
       }
     },
-    [activeLocation, persona, scene]
+    [location, persona, scene]
   );
 
   const selectPersona = useCallback(
@@ -248,6 +274,7 @@ export function useCityMind() {
       }
 
       const conversation = conversationOverride ?? chatMessages;
+      const requestVersion = ++workflowVersionRef.current;
 
       const userMessage: ChatMessage = {
         id: createId("msg"),
@@ -271,6 +298,11 @@ export function useCityMind() {
           scene: scene ?? undefined,
           recommendation: result ?? undefined
         });
+
+        if (requestVersion !== workflowVersionRef.current) {
+          return;
+        }
+
         setChatMessages((messages) => [
           ...messages,
           {
@@ -282,6 +314,10 @@ export function useCityMind() {
         ]);
         setStatus(result ? "ready" : "scene-ready");
       } catch (apiError) {
+        if (requestVersion !== workflowVersionRef.current) {
+          return;
+        }
+
         setError(getClientError(apiError));
         setRetryAction({ kind: "chat", message: trimmed, conversation });
         setStatus("error");
@@ -359,7 +395,8 @@ export function useCityMind() {
     result,
     chatMessages,
     error,
-    location: activeLocation,
+    location: mapLocation,
+    hasDeviceLocation: Boolean(location),
     permissionState,
     suggestedPrompts,
     lastPrompt,
