@@ -1,6 +1,7 @@
 import { createFallbackScene } from "@/services/fallbackData";
 import { hasOpenAIConfig, requestJsonFromOpenAI } from "@/services/openaiService";
 import { loadPrompts } from "@/services/promptService";
+import { VISION_REQUEST_TIMEOUT_MS } from "@/lib/constants";
 import type { Coordinates } from "@/types/map";
 import type { VisionScene } from "@/types/vision";
 import { visionSceneSchema } from "@/lib/validators";
@@ -111,7 +112,8 @@ export async function analyzeImage(input: {
         strict: true,
         schema: visionJsonSchema
       },
-      schema: visionSceneSchema
+      schema: visionSceneSchema,
+      timeoutMs: VISION_REQUEST_TIMEOUT_MS
     });
 
     return {

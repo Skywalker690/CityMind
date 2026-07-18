@@ -1,6 +1,15 @@
-import { DEFAULT_DESTINATION, DEFAULT_LOCATION, DEMO_DESTINATION_LABEL } from "@/lib/constants";
+import {
+  DEFAULT_DESTINATION,
+  DEFAULT_LOCATION,
+  DEMO_DESTINATION_LABEL
+} from "@/lib/constants";
 import { getPersona } from "@/lib/personas";
-import type { Coordinates, RouteSummary } from "@/types/map";
+import type {
+  Coordinates,
+  Destination,
+  DestinationResolution,
+  RouteSummary
+} from "@/types/map";
 import type { PersonaId } from "@/types/persona";
 import type { ReasoningResult, Recommendation } from "@/types/recommendation";
 import type { VisionScene } from "@/types/vision";
@@ -52,22 +61,52 @@ export function createFallbackScene(location?: Coordinates): VisionScene {
       "Prefer marked pedestrian paths over road edges.",
       "Verify elevators or ramps before committing to the route."
     ],
-    warnings: ["This is a fallback scene interpretation because live AI vision is unavailable."],
+    warnings: [
+      "This is a fallback scene interpretation because live AI vision is unavailable."
+    ],
     confidence: 0.58,
     location
   };
 }
 
+type CreateFallbackRouteInput = {
+  origin: Coordinates;
+  destination: Destination;
+  reason: string;
+};
+
 export function createFallbackRoute(
-  origin: Coordinates = DEFAULT_LOCATION,
+  input: CreateFallbackRouteInput
+): RouteSummary;
+export function createFallbackRoute(
+  origin?: Coordinates,
+  destination?: Coordinates,
+  persona?: PersonaId
+): RouteSummary;
+export function createFallbackRoute(
+  inputOrOrigin: CreateFallbackRouteInput | Coordinates = DEFAULT_LOCATION,
   destination: Coordinates = DEFAULT_DESTINATION,
   persona: PersonaId = "tourist"
 ): RouteSummary {
-  const accessible = persona === "wheelchair" || persona === "elderly" || persona === "luggage";
+  if (isCreateFallbackRouteInput(inputOrOrigin)) {
+    return createEstimatedFallbackRoute(inputOrOrigin);
+  }
+
+  const accessible =
+    persona === "wheelchair" || persona === "elderly" || persona === "luggage";
+  const origin = inputOrOrigin;
+  const waypoint = {
+    label: accessible ? "Step-free station access" : "Station concourse",
+    coordinates: {
+      latitude: (origin.latitude + destination.latitude) / 2,
+      longitude: (origin.longitude + destination.longitude) / 2
+    },
+    type: "waypoint" as const
+  };
 
   return {
     origin: {
-      label: "Current scene",
+      label: "Current location",
       coordinates: origin,
       type: "origin"
     },
@@ -76,16 +115,7 @@ export function createFallbackRoute(
       coordinates: destination,
       type: "destination"
     },
-    waypoints: [
-      {
-        label: accessible ? "Step-free station access" : "Station concourse",
-        coordinates: {
-          latitude: (origin.latitude + destination.latitude) / 2,
-          longitude: (origin.longitude + destination.longitude) / 2
-        },
-        type: "waypoint"
-      }
-    ],
+    waypoints: [waypoint],
     distanceMeters: accessible ? 780 : 620,
     durationSeconds: accessible ? 720 : 540,
     accessible,
@@ -101,7 +131,9 @@ export function createFallbackRoute(
             "No live accessibility data source has verified ramps or elevators."
           ]
         : [],
-      warnings: ["Confirm elevators, ramps, and temporary closures before relying on this route."]
+      warnings: [
+        "Confirm elevators, ramps, and temporary closures before relying on this route."
+      ]
     },
     geometry: [
       origin,
@@ -132,97 +164,159 @@ export function createFallbackRoute(
     },
     steps: [
       {
-        instruction: accessible
-          ? "Start with the step-free station approach and avoid stair-only entries."
-          : "Move toward the visible station entrance and follow transport signage.",
-        distanceMeters: accessible ? 180 : 140,
-        durationSeconds: accessible ? 180 : 120
-      },
-      {
-        instruction: accessible
-          ? "Use elevator or ramp access before continuing toward the ferry connection."
-          : "Continue through the concourse toward the onward transport connection.",
-        distanceMeters: accessible ? 420 : 350,
-        durationSeconds: accessible ? 390 : 300
-      },
-      {
-        instruction: "Confirm the final platform, exit, or ferry boarding point on arrival.",
-        distanceMeters: accessible ? 180 : 130,
-        durationSeconds: accessible ? 150 : 120
+        instruction: `Follow signage toward ${DEMO_DESTINATION_LABEL} and verify each turn with local wayfinding.`,
+        distanceMeters: accessible ? 780 : 620,
+        durationSeconds: accessible ? 720 : 540
       }
     ],
-    warnings: ["Route is estimated from fallback geometry because live routing is unavailable."]
+    warnings: [
+      "Route is estimated from fallback geometry because live routing is unavailable."
+    ]
   };
 }
 
-function recommendationForPersona(persona: PersonaId): Recommendation {
+function createEstimatedFallbackRoute(input: CreateFallbackRouteInput): RouteSummary {
+  const directDistance = calculateDistanceMeters(
+    input.origin,
+    input.destination.coordinates
+  );
+  const distanceMeters = Math.max(1, Math.round(directDistance * 1.25));
+  const durationSeconds = Math.max(60, Math.round(distanceMeters / 1.15));
+  const accessibilityWarning =
+    "No accessibility data source verified elevators, ramps, curb cuts, surface conditions, or closures for this estimated guide.";
+
+  return {
+    origin: {
+      label: "Current location",
+      coordinates: input.origin,
+      type: "origin"
+    },
+    destination: {
+      label: input.destination.label,
+      coordinates: input.destination.coordinates,
+      type: "destination"
+    },
+    waypoints: [],
+    distanceMeters,
+    durationSeconds,
+    accessible: false,
+    travelMode: "walking",
+    source: "fallback",
+    status: "estimated",
+    accessibility: {
+      status: "unverified",
+      verified: false,
+      evidence: [],
+      warnings: [accessibilityWarning]
+    },
+    geometry: [input.origin, input.destination.coordinates],
+    geometryGeoJson: {
+      type: "LineString",
+      coordinates: [
+        [input.origin.longitude, input.origin.latitude],
+        [
+          input.destination.coordinates.longitude,
+          input.destination.coordinates.latitude
+        ]
+      ]
+    },
+    steps: [
+      {
+        instruction: `Use local pedestrian signage or a live navigation app to verify the walk to ${input.destination.label}.`,
+        distanceMeters,
+        durationSeconds
+      }
+    ],
+    warnings: [input.reason, accessibilityWarning]
+  };
+}
+
+function recommendationForPersona(
+  persona: PersonaId,
+  destination?: Destination
+): Recommendation {
   const profile = getPersona(persona);
+  const destinationContext = destination
+    ? ` toward ${destination.label}`
+    : " once you choose a destination";
 
   if (persona === "wheelchair") {
     return {
       id: "accessible-route",
-      title: "Best Accessible Path",
+      title: "Verify the Step-Free Option",
       category: "accessibility",
       recommendation:
-        "Use the station access path that confirms elevator or ramp availability before entering.",
+        "Before continuing, identify an entrance that explicitly confirms step-free access.",
       reason:
-        "The image suggests a transit environment, but elevator access is not visually confirmed, so the safest wheelchair guidance is to verify the step-free entrance first.",
+        "The available scene and route data do not verify elevators, ramps, or curb cuts, so assuming accessibility would be unsafe.",
       benefits: [
-        "Avoids stair-dependent decisions",
-        "Keeps the route barrier-free",
+        "Avoids a stair-dependent detour",
+        "Keeps accessibility evidence central to the decision",
         "Reduces the chance of backtracking"
       ],
-      estimatedEffort: "Moderate, with verification needed",
-      confidence: 0.68,
-      suggestedAction: "Ask station staff or signage to confirm the step-free entrance."
+      estimatedEffort: "Verification needed before travel",
+      confidence: 0.64,
+      suggestedAction: `Check official signage or ask staff for a verified step-free path${destinationContext}.`
     };
   }
 
   if (persona === "elderly") {
     return {
       id: "comfort-route",
-      title: "Most Comfortable Route",
+      title: "Prioritize a Low-Effort Path",
       category: "accessibility",
       recommendation:
-        "Choose the entrance with the shortest covered walk and elevator access, even if it adds a small detour.",
+        "Choose the simplest clearly signed path, then verify whether it avoids unnecessary level changes.",
       reason:
-        "For an elderly companion, reduced walking, shade, and fewer level changes matter more than the absolute shortest distance.",
-      benefits: ["Reduces fatigue", "Avoids stairs where possible", "Keeps the route simpler"],
-      estimatedEffort: "Low to moderate",
-      confidence: 0.72,
-      suggestedAction: "Confirm elevator signage before moving deeper into the station."
+        "Reduced walking and fewer stairs may help an elderly companion, but those conditions are not confirmed by the available data.",
+      benefits: [
+        "Supports a more comfortable pace",
+        "Avoids relying on unverified infrastructure",
+        "Encourages early verification"
+      ],
+      estimatedEffort: "Low to moderate after verification",
+      confidence: 0.66,
+      suggestedAction: `Confirm the lowest-effort entrance or route${destinationContext}.`
     };
   }
 
   if (persona === "luggage") {
     return {
       id: "luggage-route",
-      title: "Easiest With Luggage",
+      title: "Minimize Carrying Effort",
       category: "navigation",
       recommendation:
-        "Take the wider station approach and prioritize elevator or escalator access over the shortest stair route.",
+        "Favor the clearest, wider-looking pedestrian approach and verify any elevator or escalator before relying on it.",
       reason:
-        "Luggage makes stairs and narrow paths costly, so a slightly longer path with smoother movement is the better decision.",
-      benefits: ["Less carrying effort", "Fewer stairs", "Better movement through crowds"],
-      estimatedEffort: "Lower carrying effort",
-      confidence: 0.76,
-      suggestedAction: "Follow signs for elevator, escalator, or accessible entry."
+        "Luggage makes stairs and narrow paths costly, while the available data cannot confirm which access features are currently usable.",
+      benefits: [
+        "Reduces the likelihood of a difficult detour",
+        "Keeps decisions based on visible signage",
+        "Avoids treating unverified elevators as available"
+      ],
+      estimatedEffort: "Moderate, with on-site verification",
+      confidence: 0.68,
+      suggestedAction: `Follow signs for the clearest pedestrian route${destinationContext}.`
     };
   }
 
   if (persona === "daily-commuter") {
     return {
       id: "commuter-route",
-      title: "Fastest Practical Move",
+      title: "Use the Clearest Confirmed Direction",
       category: "transport",
       recommendation:
-        "Use the most direct signed entrance and avoid unnecessary exploration unless the station looks crowded.",
+        "Follow the most legible signed pedestrian path and confirm the destination before committing to a transfer or entrance.",
       reason:
-        "A daily commuter benefits most from speed and low decision time when the scene is familiar transit infrastructure.",
-      benefits: ["Faster station entry", "Fewer decisions", "Keeps the route direct"],
-      estimatedEffort: "Fast, moderate walking",
-      confidence: 0.74,
-      suggestedAction: "Proceed through the nearest signed entrance."
+        "With live routing or destination data unavailable, a short confirmation step prevents a fast choice from becoming a detour.",
+      benefits: [
+        "Keeps the next action practical",
+        "Limits avoidable backtracking",
+        "Uses available on-site information"
+      ],
+      estimatedEffort: "Fast confirmation required",
+      confidence: 0.65,
+      suggestedAction: `Confirm the next signed route${destinationContext}.`
     };
   }
 
@@ -231,52 +325,94 @@ function recommendationForPersona(persona: PersonaId): Recommendation {
     title: `${profile.shortLabel} Guidance`,
     category: "exploration",
     recommendation:
-      "Use the main station entrance first, then orient yourself using visible signage before choosing onward transport.",
+      "Orient yourself using visible signs and confirm the destination before choosing an onward route.",
     reason:
-      "For an unfamiliar area, the best first move is to reach the most legible transit point, reduce uncertainty, and then continue with clearer local cues.",
-    benefits: ["Reduces confusion", "Uses recognizable landmarks", "Keeps onward options open"],
-    estimatedEffort: "Moderate walking",
-    confidence: 0.7,
-    suggestedAction: "Move toward the main entrance and ask a follow-up once signage is visible."
+      "For an unfamiliar area, verified local information is safer than assuming a particular exit, service, or accessible entrance.",
+    benefits: [
+      "Reduces uncertainty",
+      "Encourages a clear next step",
+      "Avoids invented local details"
+    ],
+    estimatedEffort: "Short orientation step",
+    confidence: 0.64,
+    suggestedAction: destination
+      ? `Use signage or staff to confirm the route to ${destination.label}.`
+      : "Choose a destination to prepare a route."
   };
 }
 
-export function createFallbackReasoning(input: {
-  scene: VisionScene;
-  persona: PersonaId;
-  userPrompt: string;
-  location?: Coordinates;
-}): ReasoningResult {
-  const route = createFallbackRoute(
-    input.location ?? input.scene.location ?? DEFAULT_LOCATION,
-    DEFAULT_DESTINATION,
-    input.persona
-  );
+export function createFallbackReasoning(
+  input: {
+    scene: VisionScene;
+    persona: PersonaId;
+    userPrompt: string;
+    location?: Coordinates;
+  },
+  context: {
+    destination?: Destination;
+    destinationResolution?: DestinationResolution;
+    route?: RouteSummary;
+  } = {}
+): ReasoningResult {
+  const resolutionWarning = context.destinationResolution?.message;
+  const fallbackDestination: Destination =
+    context.destination ?? {
+      label: DEMO_DESTINATION_LABEL,
+      coordinates: DEFAULT_DESTINATION,
+      source: "explicit-coordinates"
+    };
+  const fallbackOrigin =
+    input.location ?? input.scene.location ?? DEFAULT_LOCATION;
+  const fallbackRoute =
+    context.route ??
+    createFallbackRoute({
+      origin: fallbackOrigin,
+      destination: fallbackDestination,
+      reason:
+        "Live walking directions are unavailable, so CityMind generated an estimated guide."
+    });
 
   return {
     scene: input.scene,
     intent: inferFallbackIntent(input.userPrompt),
     reasoning:
-      "CityMind combined the visible transit context, the selected persona, and the user's question. Because live AI or map data is unavailable, the guidance avoids claiming unverified station details and focuses on the safest practical next action.",
-    recommendations: [recommendationForPersona(input.persona)],
-    route,
-    nearbyPlaces: [
-      {
-        name: "Station information counter",
-        type: "Transit support",
-        reason: "Useful for confirming exits, elevators, and onward transport."
-      },
-      {
-        name: "Main road pickup point",
-        type: "Transport connection",
-        reason: "A likely place to connect with buses, taxis, or rideshare."
-      }
-    ],
+      "CityMind combined the visible context, selected persona, and question. Fallback guidance avoids claiming live infrastructure, destination, or accessibility details that could not be verified.",
+    recommendations: [recommendationForPersona(input.persona, context.destination)],
+    destination: context.destination,
+    destinationResolution: context.destinationResolution,
+    route: fallbackRoute,
+    nearbyPlaces: [],
     warnings: [
-      "Elevator and platform details must be verified because the fallback mode cannot confirm live infrastructure."
+      "CityMind is using fallback reasoning because live AI or routing data is unavailable.",
+      ...(resolutionWarning ? [resolutionWarning] : [])
     ],
-    confidence: 0.7
+    confidence: context.destination && context.route?.status === "routed" ? 0.68 : 0.58
   };
+}
+
+function isCreateFallbackRouteInput(
+  value: CreateFallbackRouteInput | Coordinates
+): value is CreateFallbackRouteInput {
+  return "origin" in value && "destination" in value && "reason" in value;
+}
+
+function calculateDistanceMeters(origin: Coordinates, destination: Coordinates) {
+  const earthRadiusMeters = 6_371_000;
+  const latitudeDelta = toRadians(destination.latitude - origin.latitude);
+  const longitudeDelta = toRadians(destination.longitude - origin.longitude);
+  const originLatitude = toRadians(origin.latitude);
+  const destinationLatitude = toRadians(destination.latitude);
+  const haversine =
+    Math.sin(latitudeDelta / 2) ** 2 +
+    Math.cos(originLatitude) *
+      Math.cos(destinationLatitude) *
+      Math.sin(longitudeDelta / 2) ** 2;
+
+  return earthRadiusMeters * 2 * Math.atan2(Math.sqrt(haversine), Math.sqrt(1 - haversine));
+}
+
+function toRadians(value: number) {
+  return (value * Math.PI) / 180;
 }
 
 function inferFallbackIntent(prompt: string) {

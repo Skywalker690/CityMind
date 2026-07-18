@@ -1,4 +1,5 @@
 import { getPersona } from "@/lib/personas";
+import { CHAT_REQUEST_TIMEOUT_MS } from "@/lib/constants";
 import { hasOpenAIConfig, requestJsonFromOpenAI } from "@/services/openaiService";
 import { loadPrompts } from "@/services/promptService";
 import type { ChatMessage, ChatResponse } from "@/types/chat";
@@ -80,7 +81,8 @@ export async function continueConversation(input: {
         strict: true,
         schema: chatJsonSchema
       },
-      schema: chatResponseSchema
+      schema: chatResponseSchema,
+      timeoutMs: CHAT_REQUEST_TIMEOUT_MS
     });
   } catch {
     return {

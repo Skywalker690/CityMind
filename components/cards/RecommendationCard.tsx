@@ -9,6 +9,7 @@ import type { Recommendation } from "@/types/recommendation";
 
 interface RecommendationCardProps {
   recommendation: Recommendation;
+  onAction?: (recommendation: Recommendation) => void;
 }
 
 const iconByCategory = {
@@ -20,7 +21,10 @@ const iconByCategory = {
   "nearby-service": Sparkles
 } satisfies Record<Recommendation["category"], typeof Compass>;
 
-export function RecommendationCard({ recommendation }: RecommendationCardProps) {
+export function RecommendationCard({
+  recommendation,
+  onAction
+}: RecommendationCardProps) {
   const Icon = iconByCategory[recommendation.category];
 
   return (
@@ -67,6 +71,8 @@ export function RecommendationCard({ recommendation }: RecommendationCardProps) 
               variant="outline"
               size="sm"
               className="h-auto min-h-9 whitespace-normal text-left"
+              onClick={() => onAction?.(recommendation)}
+              aria-label={`${recommendation.suggestedAction}: ${recommendation.title}`}
             >
               {recommendation.suggestedAction}
               <ArrowRight aria-hidden />

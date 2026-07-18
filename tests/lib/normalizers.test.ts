@@ -43,7 +43,7 @@ describe("response normalizers", () => {
         route: null
       },
       scene,
-      route
+      { route }
     );
 
     expect(normalized.scene).toEqual(scene);

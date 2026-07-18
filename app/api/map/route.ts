@@ -9,20 +9,15 @@ export const runtime = "nodejs";
 export async function POST(request: Request) {
   try {
     const payload = mapRequestSchema.parse(await request.json());
-    const destination =
-      payload.destination && "latitude" in payload.destination
-        ? payload.destination
-        : payload.destination?.coordinates;
-    const route = await generateRoute({
-      origin: payload.origin,
-      destination,
-      persona: payload.persona
-    });
+    const result = await generateRoute(payload);
 
     return apiSuccess({
-      route,
-      distance: route.distanceMeters,
-      duration: route.durationSeconds
+      route: result.route ?? null,
+      destination: result.destination ?? null,
+      destinationResolution: result.destinationResolution,
+      distance: result.route?.distanceMeters ?? null,
+      duration: result.route?.durationSeconds ?? null,
+      warnings: result.warnings
     });
   } catch (error) {
     if (error instanceof ZodError) {

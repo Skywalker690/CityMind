@@ -1,4 +1,9 @@
-import type { Coordinates, RouteSummary } from "@/types/map";
+import type {
+  Coordinates,
+  Destination,
+  DestinationResolution,
+  RouteSummary
+} from "@/types/map";
 import type { ReasoningResult } from "@/types/recommendation";
 import type { VisionScene } from "@/types/vision";
 
@@ -11,6 +16,14 @@ type NullableReasoningResult = Omit<ReasoningResult, "scene" | "route"> & {
   route?: RouteSummary | null;
 };
 
+interface ReasoningEnrichment {
+  destination?: Destination;
+  destinationResolution?: DestinationResolution;
+  route?: RouteSummary;
+  /** Use only server-generated route data instead of a model-provided route. */
+  replaceRoute?: boolean;
+}
+
 export function normalizeVisionScene(scene: NullableVisionScene): VisionScene {
   return {
     ...scene,
@@ -21,11 +34,19 @@ export function normalizeVisionScene(scene: NullableVisionScene): VisionScene {
 export function normalizeReasoningResult(
   result: NullableReasoningResult,
   fallbackScene?: VisionScene,
-  fallbackRoute?: RouteSummary
+  enrichment?: ReasoningEnrichment
 ): ReasoningResult {
+  const destination = enrichment?.destination ?? result.destination;
+  const destinationResolution =
+    enrichment?.destinationResolution ?? result.destinationResolution;
+
   return {
     ...result,
     scene: result.scene ? normalizeVisionScene(result.scene) : fallbackScene,
-    route: result.route ?? fallbackRoute
+    destination: destination ?? undefined,
+    destinationResolution: destinationResolution ?? undefined,
+    route: enrichment?.replaceRoute
+      ? enrichment.route
+      : result.route ?? enrichment?.route
   };
 }
