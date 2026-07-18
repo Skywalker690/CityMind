@@ -1,0 +1,33 @@
+# dependencies
+node_modules
+.pnp
+.pnp.*
+
+# next
+.next
+out
+
+# production
+build
+
+# local env
+.env
+.env*.local
+
+# logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.log
+
+# generated type/build cache
+tsconfig.tsbuildinfo
+pnpm-workspace.yaml
+
+# system
+.DS_Store
+Thumbs.db
+
+# vercel
+.vercel
