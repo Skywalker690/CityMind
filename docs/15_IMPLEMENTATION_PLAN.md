@@ -104,15 +104,11 @@ Delivered:
 Delivered:
 
 - Typed destinationQuery and destination contracts.
-- Google Places API (New) Text Search for text-destination resolution.
-- Google Routes API Compute Routes as the preferred walking-route provider.
-- Configured foot-profile OSRM as a secondary live route provider.
-- Honest estimated route only after both live direction providers fail.
-- Google Maps JavaScript API rendering with route polyline, markers, zoom,
-  map-type, fullscreen, Street View, recenter controls, and text/local visual
-  fallback.
-- Optional Google map ID support for Advanced Markers and custom map styling,
-  with a compatible marker fallback when no map ID is configured.
+- Nominatim for no-key text-destination resolution.
+- OpenStreetMap OSRM foot routing as the live walking-route provider.
+- Honest estimated route only after the live route provider fails.
+- Leaflet rendering with OpenStreetMap tiles, route polyline, markers, zoom,
+  scale, recenter controls, and text/local visual fallback.
 - Separate route source, route status, and accessibility evidence/warning
   fields. Persona priorities never mark a route as verified accessible.
 
@@ -166,17 +162,12 @@ Destination coordinates
 Destination query / label / prompt phrase
         |
         v
-Google Places API (New) Text Search
+Nominatim search
         |
         +--> unresolved -> show typed resolution message; no route
         |
         v
-Google Routes API Compute Routes walking
-        |
-        +--> usable route -> source: google, status: routed
-        |
-        v
-OSRM foot routing
+OpenStreetMap OSRM foot routing
         |
         +--> usable route -> source: osrm, status: routed
         |
@@ -198,17 +189,13 @@ Copy `.env.example` into a local environment file and configure as needed:
 ```env
 OPENAI_API_KEY=
 OPENAI_MODEL=gpt-4.1-mini
-NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=
-NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID=
-GOOGLE_MAPS_SERVER_API_KEY=
 OSRM_BASE_URL=
 ```
 
 Deployment is Vercel-ready once production contains appropriate provider
-credentials. The public Google Maps browser key is intentionally browser-visible
-and must be restricted to approved app origins. OpenAI and the server Google
-Maps key are not browser-visible. A server key is required for deployment; the
-app falls back to the browser key only for local/demo compatibility.
+credentials. No mapping key is required for the small MVP. OpenAI remains
+server-only, while the shared Nominatim and OpenStreetMap OSRM services are
+rate-limited and should be replaced by self-hosted infrastructure for scale.
 
 OSRM is optional and must point to a provider configured with a walking/foot
 profile. A generic public route endpoint must not be described as a reliable

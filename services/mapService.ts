@@ -13,17 +13,13 @@ import type {
 } from "@/types/map";
 import type { PersonaId } from "@/types/persona";
 
-const GOOGLE_PLACES_TEXT_SEARCH_URL = "https://places.googleapis.com/v1/places:searchText";
-const GOOGLE_WALKING_DIRECTIONS_URL = "https://routes.googleapis.com/directions/v2:computeRoutes";
-const GOOGLE_PLACES_FIELD_MASK = "places.displayName,places.formattedAddress,places.location";
-const GOOGLE_ROUTES_FIELD_MASK = [
-  "routes.distanceMeters",
-  "routes.duration",
-  "routes.polyline.encodedPolyline",
-  "routes.legs.steps.distanceMeters",
-  "routes.legs.steps.staticDuration",
-  "routes.legs.steps.navigationInstruction.instructions"
-].join(",");
+const NOMINATIM_SEARCH_URL = "https://nominatim.openstreetmap.org/search";
+const COMMUNITY_FOOT_ROUTER_BASE_URL = "https://routing.openstreetmap.de/routed-foot";
+const OSRM_FOOT_PROFILE = "driving";
+const NOMINATIM_REQUEST_INTERVAL_MS = 1_000;
+const NOMINATIM_USER_AGENT = "CityMind/1.0 (OpenStreetMap urban mobility demo)";
+
+let nextNominatimRequestAt = 0;
 
 const osrmRouteResponseSchema = z
   .object({
@@ -70,77 +66,18 @@ const osrmRouteResponseSchema = z
   })
   .passthrough();
 
-const googlePlacesTextSearchResponseSchema = z
-  .object({
-    places: z
-      .array(
-        z
-          .object({
-            displayName: z
-              .object({
-                text: z.string().optional()
-              })
-              .optional(),
-            formattedAddress: z.string().optional(),
-            location: z
-              .object({
-                latitude: z.number().finite(),
-                longitude: z.number().finite()
-              })
-              .optional()
-          })
-          .passthrough()
-      )
-      .default([])
-  })
-  .passthrough();
-
-const googleRoutesResponseSchema = z
-  .object({
-    routes: z
-      .array(
-        z
-          .object({
-            distanceMeters: z.number().finite().nonnegative(),
-            duration: z.string(),
-            polyline: z.object({
-              encodedPolyline: z.string().min(1)
-            }),
-            legs: z
-              .array(
-                z
-                  .object({
-                    steps: z
-                      .array(
-                        z
-                          .object({
-                            distanceMeters: z.number().finite().nonnegative().optional(),
-                            staticDuration: z.string().optional(),
-                            navigationInstruction: z
-                              .object({
-                                instructions: z.string().optional()
-                              })
-                              .optional()
-                          })
-                          .passthrough()
-                      )
-                      .optional()
-                  })
-                  .passthrough()
-              )
-              .optional()
-          })
-          .passthrough()
-      )
-      .default([])
-  })
-  .passthrough();
+const nominatimSearchResponseSchema = z.array(
+  z
+    .object({
+      display_name: z.string().optional(),
+      lat: z.string(),
+      lon: z.string()
+    })
+    .passthrough()
+);
 
 type OsrmRoute = NonNullable<z.infer<typeof osrmRouteResponseSchema>["routes"]>[number];
 type OsrmRouteStep = NonNullable<NonNullable<OsrmRoute["legs"]>[number]["steps"]>[number];
-type GooglePlace = z.infer<typeof googlePlacesTextSearchResponseSchema>["places"][number];
-type GoogleRoute = z.infer<typeof googleRoutesResponseSchema>["routes"][number];
-type GoogleRouteStep = NonNullable<NonNullable<GoogleRoute["legs"]>[number]["steps"]>[number];
 
 export interface GenerateRouteInput {
   origin?: Coordinates;
@@ -215,40 +152,23 @@ export async function resolveDestination(input: {
     };
   }
 
-  const googleMapsApiKey = getServerConfig().googleMapsApiKey;
-
-  if (!googleMapsApiKey) {
-    return {
-      status: "unavailable",
-      query,
-      message:
-        "Destination search is unavailable, so CityMind cannot confirm a route for that place yet."
-    };
-  }
-
   try {
+    await waitForNominatimRequestSlot();
+    const url = new URL(NOMINATIM_SEARCH_URL);
+    url.searchParams.set("q", query);
+    url.searchParams.set("format", "jsonv2");
+    url.searchParams.set("limit", "1");
+    url.searchParams.set("addressdetails", "0");
+    url.searchParams.set("viewbox", createNominatimViewbox(input.origin));
+
     const response = await fetchWithTimeout(
-      GOOGLE_PLACES_TEXT_SEARCH_URL,
+      url,
       {
-        method: "POST",
         cache: "no-store",
         headers: {
           Accept: "application/json",
-          "Content-Type": "application/json",
-          "X-Goog-Api-Key": googleMapsApiKey,
-          "X-Goog-FieldMask": GOOGLE_PLACES_FIELD_MASK
-        },
-        body: JSON.stringify({
-          textQuery: query,
-          pageSize: 1,
-          languageCode: "en",
-          locationBias: {
-            circle: {
-              center: toGoogleLatLng(input.origin),
-              radius: 50_000
-            }
-          }
-        })
+          "User-Agent": NOMINATIM_USER_AGENT
+        }
       },
       MAP_REQUEST_TIMEOUT_MS,
       "Destination search"
@@ -258,11 +178,11 @@ export async function resolveDestination(input: {
       return unavailableDestinationResolution(query);
     }
 
-    const parsedResponse = googlePlacesTextSearchResponseSchema.safeParse(await response.json());
-    const place = parsedResponse.success ? parsedResponse.data.places[0] : undefined;
-    const coordinates = place?.location;
+    const parsedResponse = nominatimSearchResponseSchema.safeParse(await response.json());
+    const result = parsedResponse.success ? parsedResponse.data[0] : undefined;
+    const coordinates = result ? toCoordinates(result.lat, result.lon) : undefined;
 
-    if (!coordinates || !areValidCoordinates(coordinates.latitude, coordinates.longitude)) {
+    if (!coordinates) {
       return {
         status: "not-found",
         query,
@@ -274,9 +194,9 @@ export async function resolveDestination(input: {
     return {
       status: "resolved",
       destination: {
-        label: getGooglePlaceLabel(place, query),
+        label: result?.display_name?.trim() || query,
         coordinates,
-        source: "google-places",
+        source: "nominatim",
         query
       }
     };
@@ -313,101 +233,21 @@ async function requestWalkingRoute(input: {
   originLabel: string;
   destination: Destination;
 }): Promise<RouteSummary> {
-  const config = getServerConfig();
+  const configuredBaseUrl = getServerConfig().osrmBaseUrl;
+  const route = await requestOsrmWalkingRoute({
+    ...input,
+    baseUrl: configuredBaseUrl ?? COMMUNITY_FOOT_ROUTER_BASE_URL
+  });
 
-  if (config.googleMapsApiKey) {
-    const googleRoute = await requestGoogleWalkingRoute({
-      ...input,
-      apiKey: config.googleMapsApiKey
-    });
-
-    if (googleRoute) {
-      return googleRoute;
-    }
-  }
-
-  if (config.osrmBaseUrl) {
-    const osrmRoute = await requestOsrmWalkingRoute({
-      ...input,
-      baseUrl: config.osrmBaseUrl
-    });
-
-    if (osrmRoute) {
-      return osrmRoute;
-    }
+  if (route) {
+    return route;
   }
 
   return createFallbackRoute({
     ...input,
     reason:
-      "Live walking directions could not be confirmed. This is an estimated map guide, not a verified walking route."
+      "Live OpenStreetMap walking directions could not be confirmed. This is an estimated map guide, not a verified walking route."
   });
-}
-
-async function requestGoogleWalkingRoute(input: {
-  origin: Coordinates;
-  originLabel: string;
-  destination: Destination;
-  apiKey: string;
-}): Promise<RouteSummary | undefined> {
-  try {
-    const response = await fetchWithTimeout(
-      GOOGLE_WALKING_DIRECTIONS_URL,
-      {
-        method: "POST",
-        cache: "no-store",
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-          "X-Goog-Api-Key": input.apiKey,
-          "X-Goog-FieldMask": GOOGLE_ROUTES_FIELD_MASK
-        },
-        body: JSON.stringify({
-          origin: {
-            location: {
-              latLng: toGoogleLatLng(input.origin)
-            }
-          },
-          destination: {
-            location: {
-              latLng: toGoogleLatLng(input.destination.coordinates)
-            }
-          },
-          travelMode: "WALK",
-          polylineQuality: "HIGH_QUALITY",
-          polylineEncoding: "ENCODED_POLYLINE",
-          languageCode: "en",
-          units: "METRIC"
-        })
-      },
-      MAP_REQUEST_TIMEOUT_MS,
-      "Walking route request"
-    );
-
-    if (!response.ok) {
-      return undefined;
-    }
-
-    const parsedResponse = googleRoutesResponseSchema.safeParse(await response.json());
-    const route = parsedResponse.success ? parsedResponse.data.routes[0] : undefined;
-    const geometry = route ? decodeGooglePolyline(route.polyline.encodedPolyline) : undefined;
-    const durationSeconds = route ? parseGoogleDurationSeconds(route.duration) : undefined;
-
-    if (!route || !geometry || durationSeconds === undefined) {
-      return undefined;
-    }
-
-    return toGoogleRouteSummary({
-      origin: input.origin,
-      originLabel: input.originLabel,
-      destination: input.destination,
-      route,
-      geometry,
-      durationSeconds
-    });
-  } catch {
-    return undefined;
-  }
 }
 
 async function requestOsrmWalkingRoute(input: {
@@ -419,7 +259,7 @@ async function requestOsrmWalkingRoute(input: {
   try {
     const baseUrl = input.baseUrl.replace(/\/$/, "");
     const coordinatePath = createCoordinatePath(input.origin, input.destination.coordinates);
-    const url = new URL(`${baseUrl}/route/v1/foot/${coordinatePath}`);
+    const url = new URL(`${baseUrl}/route/v1/${OSRM_FOOT_PROFILE}/${coordinatePath}`);
     url.searchParams.set("geometries", "geojson");
     url.searchParams.set("steps", "true");
     url.searchParams.set("overview", "full");
@@ -429,7 +269,8 @@ async function requestOsrmWalkingRoute(input: {
       {
         cache: "no-store",
         headers: {
-          Accept: "application/json"
+          Accept: "application/json",
+          "User-Agent": NOMINATIM_USER_AGENT
         }
       },
       MAP_REQUEST_TIMEOUT_MS,
@@ -464,34 +305,6 @@ async function requestOsrmWalkingRoute(input: {
   }
 }
 
-function toGoogleRouteSummary(input: {
-  origin: Coordinates;
-  originLabel: string;
-  destination: Destination;
-  route: GoogleRoute;
-  geometry: Coordinates[];
-  durationSeconds: number;
-}): RouteSummary {
-  return createRoutedSummary({
-    origin: input.origin,
-    originLabel: input.originLabel,
-    destination: input.destination,
-    source: "google",
-    distanceMeters: input.route.distanceMeters,
-    durationSeconds: input.durationSeconds,
-    geometry: input.geometry,
-    steps:
-      input.route.legs?.flatMap(
-        (leg) =>
-          leg.steps?.map((step) => ({
-            instruction: getGoogleStepInstruction(step),
-            distanceMeters: step.distanceMeters ?? 0,
-            durationSeconds: parseGoogleDurationSeconds(step.staticDuration) ?? 0
-          })) ?? []
-      ) ?? []
-  });
-}
-
 function toOsrmRouteSummary(input: {
   origin: Coordinates;
   originLabel: string;
@@ -502,37 +315,6 @@ function toOsrmRouteSummary(input: {
     latitude,
     longitude
   }));
-
-  return createRoutedSummary({
-    origin: input.origin,
-    originLabel: input.originLabel,
-    destination: input.destination,
-    source: "osrm",
-    distanceMeters: input.route.distance,
-    durationSeconds: input.route.duration,
-    geometry,
-    steps:
-      input.route.legs?.flatMap(
-        (leg) =>
-          leg.steps?.map((step) => ({
-            instruction: formatOsrmInstruction(step),
-            distanceMeters: step.distance ?? 0,
-            durationSeconds: step.duration ?? 0
-          })) ?? []
-      ) ?? []
-  });
-}
-
-function createRoutedSummary(input: {
-  origin: Coordinates;
-  originLabel: string;
-  destination: Destination;
-  source: "google" | "osrm";
-  distanceMeters: number;
-  durationSeconds: number;
-  geometry: Coordinates[];
-  steps: RouteSummary["steps"];
-}): RouteSummary {
   const accessibilityWarning =
     "Walking directions do not verify step-free access, elevators, ramps, surface conditions, or temporary closures.";
 
@@ -548,11 +330,11 @@ function createRoutedSummary(input: {
       type: "destination"
     },
     waypoints: [],
-    distanceMeters: input.distanceMeters,
-    durationSeconds: input.durationSeconds,
+    distanceMeters: input.route.distance,
+    durationSeconds: input.route.duration,
     accessible: false,
     travelMode: "walking",
-    source: input.source,
+    source: "osrm",
     status: "routed",
     accessibility: {
       status: "unknown",
@@ -560,12 +342,20 @@ function createRoutedSummary(input: {
       evidence: [],
       warnings: [accessibilityWarning]
     },
-    geometry: input.geometry,
+    geometry,
     geometryGeoJson: {
       type: "LineString",
-      coordinates: input.geometry.map(({ longitude, latitude }) => [longitude, latitude])
+      coordinates: input.route.geometry.coordinates
     },
-    steps: input.steps,
+    steps:
+      input.route.legs?.flatMap(
+        (leg) =>
+          leg.steps?.map((step) => ({
+            instruction: formatOsrmInstruction(step),
+            distanceMeters: step.distance ?? 0,
+            durationSeconds: step.duration ?? 0
+          })) ?? []
+      ) ?? [],
     warnings: [accessibilityWarning]
   };
 }
@@ -619,94 +409,35 @@ function unavailableDestinationResolution(query: string): DestinationResolution 
     status: "unavailable",
     query,
     message:
-      "Destination search is temporarily unavailable, so CityMind cannot confirm a route right now."
+      "OpenStreetMap destination search is temporarily unavailable, so CityMind cannot confirm a route right now."
   };
 }
 
-function toGoogleLatLng(coordinates: Coordinates) {
-  return {
-    latitude: coordinates.latitude,
-    longitude: coordinates.longitude
-  };
+function createNominatimViewbox(origin: Coordinates) {
+  const delta = 0.5;
+  return [
+    origin.longitude - delta,
+    origin.latitude + delta,
+    origin.longitude + delta,
+    origin.latitude - delta
+  ].join(",");
 }
 
-function getGooglePlaceLabel(place: GooglePlace, fallbackQuery: string) {
-  return place.displayName?.text?.trim() || place.formattedAddress?.trim() || fallbackQuery;
+function toCoordinates(latitudeValue: string, longitudeValue: string): Coordinates | undefined {
+  const latitude = Number(latitudeValue);
+  const longitude = Number(longitudeValue);
+
+  return areValidCoordinates(latitude, longitude) ? { latitude, longitude } : undefined;
 }
 
-function parseGoogleDurationSeconds(value?: string) {
-  if (!value) {
-    return undefined;
+async function waitForNominatimRequestSlot() {
+  const now = Date.now();
+  const scheduledAt = Math.max(now, nextNominatimRequestAt);
+  nextNominatimRequestAt = scheduledAt + NOMINATIM_REQUEST_INTERVAL_MS;
+
+  if (scheduledAt > now) {
+    await new Promise<void>((resolve) => setTimeout(resolve, scheduledAt - now));
   }
-
-  const match = /^(\d+(?:\.\d+)?)s$/.exec(value);
-  const seconds = match?.[1] ? Number(match[1]) : Number.NaN;
-
-  return Number.isFinite(seconds) && seconds >= 0 ? Math.round(seconds) : undefined;
-}
-
-function decodeGooglePolyline(encoded: string): Coordinates[] | undefined {
-  const points: Coordinates[] = [];
-  let latitude = 0;
-  let longitude = 0;
-  let index = 0;
-
-  while (index < encoded.length) {
-    const latitudeDelta = decodePolylineDelta(encoded, index);
-
-    if (!latitudeDelta) {
-      return undefined;
-    }
-
-    const longitudeDelta = decodePolylineDelta(encoded, latitudeDelta.nextIndex);
-
-    if (!longitudeDelta) {
-      return undefined;
-    }
-
-    latitude += latitudeDelta.value;
-    longitude += longitudeDelta.value;
-    const point = {
-      latitude: latitude / 100_000,
-      longitude: longitude / 100_000
-    };
-
-    if (!areValidCoordinates(point.latitude, point.longitude)) {
-      return undefined;
-    }
-
-    points.push(point);
-    index = longitudeDelta.nextIndex;
-  }
-
-  return points.length >= 2 ? points : undefined;
-}
-
-function decodePolylineDelta(encoded: string, startIndex: number) {
-  let index = startIndex;
-  let result = 0;
-  let shift = 0;
-
-  while (index < encoded.length) {
-    const byte = encoded.charCodeAt(index) - 63;
-    index += 1;
-
-    if (byte < 0 || byte > 63 || shift > 30) {
-      return undefined;
-    }
-
-    result += (byte & 0x1f) * 2 ** shift;
-    shift += 5;
-
-    if (byte < 0x20) {
-      return {
-        value: result & 1 ? -(Math.floor(result / 2) + 1) : Math.floor(result / 2),
-        nextIndex: index
-      };
-    }
-  }
-
-  return undefined;
 }
 
 function areValidCoordinates(latitude: number, longitude: number) {
@@ -721,10 +452,6 @@ function createCoordinatePath(origin: Coordinates, destination: Coordinates) {
   return [origin, destination]
     .map(({ longitude, latitude }) => `${longitude},${latitude}`)
     .join(";");
-}
-
-function getGoogleStepInstruction(step: GoogleRouteStep) {
-  return step.navigationInstruction?.instructions?.trim() || "Continue on the walking route.";
 }
 
 function formatOsrmInstruction(step: OsrmRouteStep) {

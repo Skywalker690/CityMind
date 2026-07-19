@@ -12,7 +12,7 @@
 
 This document defines the HTTP contract between the CityMind client and its
 Next.js route handlers. Route handlers validate requests, call services, and
-return typed envelopes. OpenAI, Google Maps Platform, and OSRM details never reach the
+return typed envelopes. OpenAI, OpenStreetMap, and OSRM details never reach the
 browser as raw provider responses.
 
 ---
@@ -116,7 +116,7 @@ Every route attempt returns a typed resolution object:
       "latitude": 9.9652,
       "longitude": 76.2422
     },
-    "source": "google-places",
+    "source": "nominatim",
     "query": "Fort Kochi ferry"
   },
   "query": "Fort Kochi ferry"
@@ -126,7 +126,7 @@ Every route attempt returns a typed resolution object:
 status is one of resolved, missing, unavailable, or not-found. Explicit
 coordinates have priority. Otherwise CityMind evaluates destinationQuery, then a
 destination label, then a destination phrase safely extracted from the user
-prompt. Text is resolved through Google Places API (New) Text Search. If it
+prompt. Text is resolved through Nominatim search. If it
 cannot be resolved, CityMind returns the status and user-facing message; it
 never routes to a guessed coordinate.
 
@@ -138,13 +138,13 @@ includes:
 - origin, destination, waypoints, and normalized coordinates;
 - GeoJSON LineString route geometry;
 - distance, duration, walking mode, and normalized steps;
-- source: google, osrm, or fallback;
+- source: osrm or fallback;
 - status: routed or estimated;
 - a separate accessibility object with verified, evidence, and warnings.
 
 accessible is retained for compatibility and is true only when trusted evidence
 verifies accessibility. A persona preference, a walking profile, or a
-Google Maps Platform/OSRM response alone is not proof of elevators, ramps,
+OpenStreetMap/OSRM response alone is not proof of elevators, ramps,
 curb cuts, surface conditions, or temporary closures.
 
 ---
@@ -224,9 +224,8 @@ recommended for a route but is not required for a useful recommendation.
 
 1. Normalize the vision scene and construct persona-aware reasoning context.
 2. Resolve the destination using the shared destination contract.
-3. Request Google Routes API Compute Routes for a walking route when a destination resolves.
-4. Retry with configured OSRM foot routing if Google Routes cannot provide
-   a usable route.
+3. Request the OpenStreetMap OSRM foot route when a destination resolves.
+4. Use the estimated route only if the live foot router cannot provide a usable route.
 5. Use OpenAI structured reasoning when available; otherwise return the
    deterministic fallback reasoning contract.
 6. Merge provider and route warnings without allowing AI output to replace

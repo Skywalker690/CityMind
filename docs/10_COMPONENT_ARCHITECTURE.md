@@ -71,7 +71,7 @@ app/page.tsx
             |   |-- RecommendationCard
             |   `-- nearby-place follow-up actions
             |-- InteractiveMap
-            |   |-- dynamically loaded Google Maps JavaScript map
+            |   |-- dynamically loaded Leaflet/OpenStreetMap map
             |   `-- textual/local visual fallback
             `-- ChatPanel
 
@@ -186,7 +186,7 @@ invoke AI.
 
 ## Map Components
 
-`InteractiveMap` is the one map feature component. It loads the Google Maps
+`InteractiveMap` is the one map feature component. It loads Leaflet and
 JavaScript API after hydration, renders normalized route geometry supplied in
 `RouteSummary`, marks origin and destination, auto-fits the route, and exposes
 zoom, map-type, fullscreen, Street View, and recenter controls. It uses Advanced

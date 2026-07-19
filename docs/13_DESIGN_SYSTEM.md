@@ -251,7 +251,7 @@ AI-generated content should have a clear structure: summary, recommendation,
 reason, benefits, confidence/uncertainty, and next action. It must never be
 rendered as raw model output.
 
-Google Maps JavaScript API displays origin/destination markers, a walking-route
+Leaflet displays origin/destination markers, a walking-route
 polyline, route status, distance, duration, and turn summary when the browser
 can initialize it. The map exposes standard zoom, map-type, fullscreen, and
 Street View controls; an optional map ID enables Advanced Markers and custom
@@ -260,7 +260,7 @@ Neither style asserts step-free accessibility. Route source, status, and
 accessibility verification notes remain readable in text alongside the visual
 map.
 
-When Google Maps cannot initialize, use the local visual fallback and retain the
+When Leaflet/OpenStreetMap cannot initialize, use the local visual fallback and retain the
 same textual route metrics and instructions. Do not disguise provider failure
 with a decorative empty map surface.
 

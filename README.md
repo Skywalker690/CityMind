@@ -39,7 +39,7 @@ Urban navigation is fragmented.
 
 People constantly switch between multiple applications.
 
-- Google Maps for routes
+- OpenStreetMap for routes
 - Weather applications
 - Metro applications
 - Search engines
@@ -126,7 +126,7 @@ simultaneous dashboard. The user sees one meaningful decision at a time:
 3. **Ask** — review the scene summary, ask a question, and optionally add a
    destination query.
 4. **Act** — receive an explained recommendation, a truthfully labelled
-   walking-route state, Google Maps visualization when available, and contextual
+   walking-route state, OpenStreetMap visualization when available, and contextual
    follow-up chat.
 
 A controlled step rail shows progress. Future stages remain unavailable until
@@ -200,10 +200,10 @@ Secondary
 
 ## Mapping
 
-- Google Maps JavaScript API
-- Google Places API (New) Text Search for destination resolution
-- Google Routes API Compute Routes for walking routes
-- OSRM foot routing as an optional secondary provider
+- Leaflet for map rendering
+- OpenStreetMap tiles
+- Nominatim for destination resolution
+- OSRM foot routing
 
 ---
 
@@ -247,17 +247,8 @@ Required for live AI, destination search, and map rendering:
 OPENAI_API_KEY=
 OPENAI_MODEL=gpt-4.1-mini
 
-# Browser-safe Google Maps JavaScript API key for interactive map rendering.
-NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=
-
-# Optional Google Map ID for Advanced Markers and custom map styling.
-NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID=
-
-# Server-only key for Google Places Text Search and Google Routes API requests.
-GOOGLE_MAPS_SERVER_API_KEY=
-
-# Optional secondary route provider. Set only to an endpoint configured with a
-# walking/foot profile; generic public demo endpoints do not guarantee this.
+# Optional self-hosted or approved OSRM-compatible foot router. Leave blank for
+# the no-key OpenStreetMap community foot router used by this MVP.
 OSRM_BASE_URL=
 ```
 
@@ -265,13 +256,11 @@ During local development, CityMind reads `.env.local` and `.env` directly before
 falling back to inherited shell variables. This prevents stale system-level API
 keys from overriding the project file.
 
-`NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` is intentionally browser-visible and should
-be restricted to the app's approved browser origins in Google Cloud. Keep
-`GOOGLE_MAPS_SERVER_API_KEY` server-only and enable the Google Maps JavaScript,
-Places API (New), and Routes API for the project. The server can fall back to
-the public key only for local/demo compatibility; deployed environments should
-use a dedicated server key. `NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID` is optional and
-enables Advanced Markers and custom map styling when configured.
+No mapping key is required. Leaflet renders OpenStreetMap tiles in the browser;
+Nominatim resolves text destinations and the OpenStreetMap community OSRM foot
+router provides walking directions. These shared community services are for the
+small MVP only: CityMind sends one Nominatim search at a time, preserves
+OpenStreetMap attribution, and falls back honestly when a public service is unavailable.
 
 Run the development server:
 
@@ -283,13 +272,12 @@ The app is designed to fail safely when a provider is unavailable:
 
 - Missing or failed OpenAI calls return deterministic, persona-aware fallback
   scene and recommendation data with clear warnings.
-- Text destinations are resolved through Google Places API (New) Text Search.
+- Text destinations are resolved through Nominatim search.
   If destination search is missing, unavailable, or cannot confidently find a
   place, CityMind does not invent a route.
-- CityMind requests Google Routes API walking directions first, then an OSRM
-  foot-profile route if the primary provider is unavailable. Only when both live
-  providers fail does it render an explicitly labelled estimated route.
-- If Google Maps cannot render in the browser, the map panel keeps route details
+- CityMind requests a no-key OpenStreetMap OSRM foot-profile route. Only when it
+  is unavailable does it render an explicitly labelled estimated route.
+- If Leaflet/OpenStreetMap cannot render in the browser, the map panel keeps route details
   available and shows a local visual fallback.
 
 Provider timeouts are bounded to 30 seconds for AI operations and 10 seconds

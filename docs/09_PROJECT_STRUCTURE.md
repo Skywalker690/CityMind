@@ -145,13 +145,13 @@ Responsibilities
 
 - Presentation and accessible interaction forwarding
 - Reusable and typed
-- Local visual state where needed (for example, Google Maps lifecycle)
+- Local visual state where needed (for example, Leaflet lifecycle)
 
 ---
 
 Never place API logic here.
 
-`components/map/InteractiveMap.tsx` owns Google Maps JavaScript API lifecycle,
+`components/map/InteractiveMap.tsx` owns Leaflet/OpenStreetMap lifecycle,
 markers, and normalized route rendering only. It receives the normalized
 `RouteSummary` from above; destination search and directions stay in
 `services/mapService.ts`.
@@ -357,12 +357,11 @@ Next.js API route handlers
 Services and prompt loader
         |
         v
-OpenAI / Google Maps Platform / OSRM
+OpenAI / OpenStreetMap / OSRM
 ```
 
 `InteractiveMap` is the deliberate client-side exception: it dynamically loads
-the Google Maps JavaScript API and uses only the public
-`NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` (plus an optional map ID) to render a map. It
+Leaflet and OpenStreetMap tiles to render a map. It
 does not call CityMind's server providers for destination search or directions;
 those remain behind route handlers and `mapService.ts`.
 

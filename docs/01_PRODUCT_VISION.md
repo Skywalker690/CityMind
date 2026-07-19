@@ -78,7 +78,7 @@ CityMind is NOT:
 * A chatbot
 * A tourist guide
 * A metro timetable app
-* A Google Maps clone
+* A traditional map clone
 * A landmark recognition application
 
 ---

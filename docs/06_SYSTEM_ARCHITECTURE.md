@@ -65,7 +65,7 @@ Next.js API Routes
  │
  ├──────────────┐
  ▼              ▼
-OpenAI API   Google Maps Platform / OSRM APIs
+OpenAI API   OpenStreetMap / OSRM APIs
  │              │
  └──────┬───────┘
         ▼
@@ -138,26 +138,21 @@ Technology
 
 ## External Services
 
-### Google Maps Platform + OSRM
+### Leaflet + OpenStreetMap + OSRM
 
 Responsibilities
 
-- Google Maps JavaScript API renders the interactive browser map.
-- Google Places API (New) Text Search resolves a user-entered destination to
-  coordinates.
-- Google Routes API Compute Routes provides the preferred walking-route
-  geometry, distance, duration, and turn steps.
-- A configured foot-profile OSRM endpoint is a secondary routing provider when
-  Google Routes cannot return a usable route.
+- Leaflet renders OpenStreetMap tiles and the interactive browser route map.
+- Nominatim resolves a user-entered destination to coordinates.
+- The OpenStreetMap community OSRM foot router provides walking-route geometry,
+  distance, duration, and turn steps.
+- A configured `OSRM_BASE_URL` can replace the community endpoint with a
+  self-hosted foot router.
 - `services/mapService.ts` isolates provider payloads and exposes only shared
   typed destination and route contracts to the rest of the app.
 
-Map rendering uses `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`; an optional
-`NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID` enables Advanced Markers and custom map
-styling. Server-side destination search and routing use
-`GOOGLE_MAPS_SERVER_API_KEY`, falling back to the public key only for local/demo
-compatibility. `OSRM_BASE_URL` configures the optional secondary foot-routing
-provider.
+The stack uses no mapping credentials. `OSRM_BASE_URL` is optional and replaces
+the community foot router only when a deployment has its own compatible endpoint.
 
 ---
 
@@ -390,15 +385,15 @@ Destination coordinates, destinationQuery, or destination language in a prompt
 Typed destination resolution
   resolved | missing | unavailable | not-found
         |
-        +-- resolved --> Google Routes walking --> OSRM secondary --> RouteSummary
+        +-- resolved --> OpenStreetMap OSRM foot route --> RouteSummary
         |
         +-- otherwise --> no fabricated route; actionable resolution message
 ```
 
 Explicit coordinates win over a text query. A text query is resolved through
-Google Places API (New) Text Search only when a Google Maps key is configured.
+Nominatim search through a rate-limited, no-key community endpoint.
 `RouteSummary` carries the origin, destination, GeoJSON line, normalized route
-points, metrics, steps, provider source (`google`, `osrm`, or `fallback`),
+points, metrics, steps, provider source (`osrm` or `fallback`),
 status (`routed` or `estimated`), and
 accessibility evidence/warnings. The route always represents a walking route;
 it is never called step-free or accessible unless trusted evidence explicitly
@@ -469,9 +464,8 @@ The architecture should gracefully recover from:
 Users should always receive actionable feedback.
 
 All provider calls use `AbortController`-based timeouts. Vision, reasoning, and
-chat allow up to 30 seconds; Google Places search and Google Routes requests
-allow up to 10 seconds. The configured OSRM secondary route provider also has a
-10-second limit. A timeout follows the same recovery policy as another provider
+chat allow up to 30 seconds; Nominatim search and OSRM requests allow up to 10
+seconds. A timeout follows the same recovery policy as another provider
 failure,
 without leaking provider details to the user.
 
@@ -483,16 +477,16 @@ credentials are missing or an external provider fails.
 Fallback behavior applies to:
 
 - OpenAI vision analysis, urban reasoning, and chat follow-ups.
-- Google Routes walking requests, followed by a configured foot-profile
-  OSRM endpoint when the primary route provider fails.
-- Google Maps JavaScript API browser rendering, where a local route visual preserves the rest of
+- OpenStreetMap OSRM foot-route requests, with a configured self-hosted
+  endpoint when supplied.
+- Leaflet/OpenStreetMap browser rendering, where a local route visual preserves the rest of
   the workflow.
 
 Fallback responses still follow the same typed response contracts and never
-invent confirmed infrastructure. If Google Places cannot resolve a textual destination,
+invent confirmed infrastructure. If Nominatim cannot resolve a textual destination,
 CityMind returns the typed resolution status and does not create a route to a
-guessed location. If both live route providers fail after a destination
-resolves, the route is marked as an estimated fallback and its warnings make
+guessed location. If the live route provider fails after a destination resolves,
+the route is marked as an estimated fallback and its warnings make
 the limitation visible.
 
 ---

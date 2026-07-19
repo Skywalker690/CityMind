@@ -195,7 +195,7 @@ than any shadow treatment.
 # Route and Map Experience
 
 The Act-stage map receives a normalized walking route only after a destination
-is resolved. When Google Maps JavaScript API is available it displays:
+is resolved. When Leaflet/OpenStreetMap is available it displays:
 
 - Current-location and resolved-destination markers.
 - Route polyline.
@@ -208,7 +208,7 @@ A live route is visually distinct from an explicitly estimated fallback route.
 Neither a walking route nor a persona preference may be presented as proof of a
 step-free or accessible path.
 
-When Google Maps is unavailable, unauthorized, or unsupported, Act retains route
+When Leaflet/OpenStreetMap is unavailable or unsupported, Act retains route
 metrics and instructions in a text-readable local visual fallback. This is a
 degraded visualization state, not a failed recommendation flow.
 

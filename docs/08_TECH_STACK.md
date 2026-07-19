@@ -49,9 +49,9 @@ The objective is to use the smallest set of technologies that delivers an except
 | Icons              | Lucide React                                             |
 | AI                 | OpenAI Responses API                                     |
 | Vision             | OpenAI Vision                                            |
-| Map rendering      | Google Maps JavaScript API                               |
-| Destination search | Google Places API (New) Text Search                      |
-| Directions         | Google Routes API Compute Routes, then OSRM foot routing |
+| Map rendering      | Leaflet with OpenStreetMap tiles                         |
+| Destination search | Nominatim                                                |
+| Directions         | OpenStreetMap OSRM foot routing                          |
 | Deployment         | Vercel                                                   |
 | Package Manager    | pnpm                                                     |
 | Validation         | Zod                                                      |
@@ -230,25 +230,20 @@ The AI should:
 
 # Maps
 
-## Google Maps Platform + OSRM
+## Leaflet + OpenStreetMap + OSRM
 
 Responsibilities
 
-- Google Maps JavaScript API renders the browser map, route geometry, markers,
-  standard map controls, and a recenter action.
-- Google Places API (New) Text Search resolves text destinations for the server.
-- Google Routes API Compute Routes is the preferred source for walking geometry,
-  route metrics, and steps.
-- A configured OSRM foot-profile endpoint is the secondary live route provider.
-- A final local estimate is clearly labelled as an estimate only after both
-  live route providers fail.
+- Leaflet renders the browser map, OpenStreetMap tile layer, route geometry,
+  markers, zoom, scale, and a recenter action.
+- Nominatim resolves text destinations for the server.
+- The OpenStreetMap community OSRM foot router provides walking geometry,
+  route metrics, and steps; `OSRM_BASE_URL` can point to a self-hosted foot router.
+- A final local estimate is clearly labelled when the live route cannot return.
 
-Google Maps Platform provides the browser map, destination search, and walking
-directions experience. The Maps JavaScript library is loaded only in the
-client-side map component so it does not inflate the server render. The map
-always retains a keyboard-readable route summary and local visual fallback when
-the public Google Maps key is absent, unauthorized, or unsupported by the
-browser. An optional map ID enables Advanced Markers and custom map styling.
+This small MVP has no mapping key. Leaflet is loaded only in the client map
+component and the UI retains a keyboard-readable route summary and local visual
+fallback when a shared community mapping service is unavailable.
 
 Map data never proves accessibility by itself. The route contract keeps
 accessibility evidence and warnings separate from persona preferences, and the
@@ -299,8 +294,7 @@ No additional HTTP client is required for the MVP.
 Server-side provider calls use a shared `AbortController` timeout helper:
 
 - OpenAI vision, reasoning, and chat: 30 seconds.
-- Google Places search and Google Routes: 10 seconds.
-- Secondary OSRM routing: 10 seconds.
+- Nominatim search and OSRM routing: 10 seconds.
 
 Provider failures are normalized into typed fallback or error responses; raw
 provider exceptions are never shown in the UI.
@@ -318,27 +312,16 @@ Environment contract (`.env.example` is authoritative):
 OPENAI_API_KEY=
 OPENAI_MODEL=gpt-4.1-mini
 
-# Browser-safe key for Google Maps JavaScript API.
-NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=
-
-# Optional map ID for Advanced Markers and custom map styling.
-NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID=
-
-# Server-only key for Google Places Text Search and Google Routes API.
-GOOGLE_MAPS_SERVER_API_KEY=
-
-# Optional secondary route provider. Set this only to a server configured with
-# a walking/foot profile; generic public demo endpoints do not guarantee it.
+# Optional self-hosted or approved OSRM-compatible foot router. Leave blank to
+# use the no-key OpenStreetMap community foot router for this small MVP.
 OSRM_BASE_URL=
 ```
 
-`NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` is intentionally visible to browser requests
-and should be restricted to approved app origins in Google Cloud.
-`GOOGLE_MAPS_SERVER_API_KEY` and `OPENAI_API_KEY` must remain server-only; the
-server may use the public key only for local/demo compatibility. Enable Google
-Maps JavaScript API, Places API (New), and Routes API for the project. In
-development, `.env.local` and `.env` take precedence over inherited shell
-values; production uses the deployment environment.
+No mapping credentials are required. The public Nominatim and community OSRM
+services are rate-limited shared infrastructure, so CityMind serializes
+Nominatim searches and preserves OpenStreetMap attribution. In development,
+`.env.local` and `.env` take precedence over inherited shell values; production
+uses the deployment environment.
 
 ---
 
