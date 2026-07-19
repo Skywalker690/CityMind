@@ -15,8 +15,7 @@ import type { PersonaId } from "@/types/persona";
 
 const GOOGLE_PLACES_TEXT_SEARCH_URL = "https://places.googleapis.com/v1/places:searchText";
 const GOOGLE_WALKING_DIRECTIONS_URL = "https://routes.googleapis.com/directions/v2:computeRoutes";
-const GOOGLE_PLACES_FIELD_MASK =
-  "places.displayName,places.formattedAddress,places.location";
+const GOOGLE_PLACES_FIELD_MASK = "places.displayName,places.formattedAddress,places.location";
 const GOOGLE_ROUTES_FIELD_MASK = [
   "routes.distanceMeters",
   "routes.duration",

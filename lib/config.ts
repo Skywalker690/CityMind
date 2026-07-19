@@ -5,15 +5,8 @@ export function getServerConfig() {
   return {
     openaiApiKey: getConfigValue("OPENAI_API_KEY"),
     openaiModel: getConfigValue("OPENAI_MODEL") ?? "gpt-4.1-mini",
-    // Use a server-restricted Google Maps Platform key for Places and Routes.
-    // The browser key is a development fallback only; production should keep
-    // the server key separate and restricted to the required web services.
-    googleMapsApiKey:
-      getConfigValue("GOOGLE_MAPS_SERVER_API_KEY") ??
-      getConfigValue("NEXT_PUBLIC_GOOGLE_MAPS_API_KEY"),
-    // OSRM is deliberately opt-in: a deployment must point this at a server
-    // configured with a walking/foot profile. The public demo server does not
-    // make that guarantee.
+    // A self-hosted or otherwise approved OSRM-compatible foot-routing server
+    // can replace the small-MVP community fallback without changing services.
     osrmBaseUrl: getConfigValue("OSRM_BASE_URL")
   };
 }
@@ -22,12 +15,12 @@ export function getServerHealth() {
   const config = getServerConfig();
   const services = {
     ai: config.openaiApiKey ? "live" : "fallback",
-    geocoding: config.googleMapsApiKey ? "live" : "unavailable",
-    routing: config.googleMapsApiKey ? "live" : config.osrmBaseUrl ? "fallback" : "unavailable"
+    geocoding: "live",
+    routing: "live"
   } as const;
 
   const status =
-    services.ai === "live" && services.geocoding === "live" && services.routing !== "unavailable"
+    services.ai === "live" && services.geocoding === "live" && services.routing === "live"
       ? "healthy"
       : "degraded";
 

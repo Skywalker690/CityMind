@@ -43,7 +43,7 @@ export const destinationSchema = z
   .object({
     label: textSchema(160),
     coordinates: coordinatesSchema,
-    source: z.enum(["explicit-coordinates", "google-places"]),
+    source: z.enum(["explicit-coordinates", "nominatim"]),
     query: textSchema(160).optional()
   })
   .strict();
@@ -144,7 +144,7 @@ export const routeSummarySchema = z
     durationSeconds: z.number().nonnegative(),
     accessible: z.boolean(),
     travelMode: z.literal("walking"),
-    source: z.enum(["google", "osrm", "fallback"]),
+    source: z.enum(["osrm", "fallback"]),
     status: z.enum(["routed", "estimated"]),
     accessibility: z
       .object({

@@ -10,7 +10,7 @@ export interface DestinationInput {
   coordinates?: Coordinates;
 }
 
-export type DestinationSource = "explicit-coordinates" | "google-places";
+export type DestinationSource = "explicit-coordinates" | "nominatim";
 
 export interface Destination {
   label: string;
@@ -19,11 +19,7 @@ export interface Destination {
   query?: string;
 }
 
-export type DestinationResolutionStatus =
-  | "resolved"
-  | "missing"
-  | "unavailable"
-  | "not-found";
+export type DestinationResolutionStatus = "resolved" | "missing" | "unavailable" | "not-found";
 
 export interface DestinationResolution {
   status: DestinationResolutionStatus;
@@ -51,7 +47,7 @@ export interface RouteLineString {
 }
 
 /** The provider that supplied the route geometry and instructions. */
-export type RouteSource = "google" | "osrm" | "fallback";
+export type RouteSource = "osrm" | "fallback";
 
 export type RouteStatus = "routed" | "estimated";
 

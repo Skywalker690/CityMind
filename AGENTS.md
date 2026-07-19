@@ -133,7 +133,7 @@ Always use:
 * shadcn/ui
 * Framer Motion
 * OpenAI Responses API
-* Google Maps Platform
+* Leaflet, OpenStreetMap, and OSRM
 * Zod
 
 Do not introduce additional frameworks unless explicitly requested.

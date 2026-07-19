@@ -126,9 +126,9 @@ Every route attempt returns a typed resolution object:
 status is one of resolved, missing, unavailable, or not-found. Explicit
 coordinates have priority. Otherwise CityMind evaluates destinationQuery, then a
 destination label, then a destination phrase safely extracted from the user
-prompt. Text is resolved through Google Places API (New) Text Search. If it cannot be resolved,
-CityMind returns the status and user-facing message; it never routes to a
-guessed coordinate.
+prompt. Text is resolved through Google Places API (New) Text Search. If it
+cannot be resolved, CityMind returns the status and user-facing message; it
+never routes to a guessed coordinate.
 
 ## Route Summary
 
@@ -144,8 +144,8 @@ includes:
 
 accessible is retained for compatibility and is true only when trusted evidence
 verifies accessibility. A persona preference, a walking profile, or a
-Google Maps Platform/OSRM response alone is not proof of elevators, ramps, curb cuts, surface
-conditions, or temporary closures.
+Google Maps Platform/OSRM response alone is not proof of elevators, ramps,
+curb cuts, surface conditions, or temporary closures.
 
 ---
 

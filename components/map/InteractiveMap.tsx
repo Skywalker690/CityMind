@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { LocateFixed, MapPinned, Navigation, ShieldAlert } from "lucide-react";
-import type { GeoJSONSource, Map as MapboxMap, Marker } from "mapbox-gl";
+import { ExternalLink, LocateFixed, MapPinned, Navigation, ShieldAlert } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,12 +9,20 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatDistance, formatDuration } from "@/lib/utils";
 import type { Coordinates, RouteSummary } from "@/types/map";
 
-const ROUTE_SOURCE_ID = "citymind-route";
-const ROUTE_LAYER_ID = "citymind-route-line";
 const MAP_STARTUP_TIMEOUT_MS = 12_000;
 
 type MapState = "loading" | "ready" | "unavailable";
-type MapboxModule = typeof import("mapbox-gl").default;
+
+type GoogleMapsLibraries = {
+  maps: google.maps.MapsLibrary;
+  marker: google.maps.MarkerLibrary;
+};
+
+type MapMarker = {
+  remove: () => void;
+};
+
+let googleMapsLibrariesPromise: Promise<GoogleMapsLibraries> | undefined;
 
 interface InteractiveMapProps {
   route?: RouteSummary | null;
@@ -29,118 +36,129 @@ export function InteractiveMap({
   hasDeviceLocation = false
 }: InteractiveMapProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<MapboxMap | null>(null);
-  const mapboxRef = useRef<MapboxModule | null>(null);
-  const markersRef = useRef<Marker[]>([]);
+  const mapRef = useRef<google.maps.Map | null>(null);
+  const mapsLibraryRef = useRef<GoogleMapsLibraries | null>(null);
+  const markersRef = useRef<MapMarker[]>([]);
+  const polylineRef = useRef<google.maps.Polyline | null>(null);
   const [mapState, setMapState] = useState<MapState>("loading");
-  const [mapMessage, setMapMessage] = useState("Preparing the interactive map.");
+  const [mapMessage, setMapMessage] = useState("Preparing the route map.");
+
+  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+  const mapId = process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID;
+  const hasRoute = Boolean(route);
+  const locationLatitude = location.latitude;
+  const locationLongitude = location.longitude;
 
   useEffect(() => {
-    const accessToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN;
+    let disposed = false;
+    let timedOut = false;
+    let startupTimer: number | undefined;
+    let activeMap: google.maps.Map | null = null;
 
+    clearMapVisuals(markersRef, polylineRef);
+    mapRef.current = null;
+    mapsLibraryRef.current = null;
     setMapState("loading");
-    setMapMessage(
-      hasDeviceLocation
-        ? "Preparing the interactive map near your shared location."
-        : "Preparing a reference-map view. Share location to start a route near you."
-    );
 
-    if (!accessToken) {
+    if (!hasRoute) {
       setMapState("unavailable");
       setMapMessage(
-        "Mapbox is not configured. CityMind is keeping the route summary and text instructions available."
+        "Add a destination and get guidance to draw a walking route. The route summary will remain available if the map cannot load."
       );
       return;
     }
 
-    let disposed = false;
-    let activeMap: MapboxMap | null = null;
-    let startupTimer: number | undefined;
+    if (!apiKey) {
+      setMapState("unavailable");
+      setMapMessage(
+        "Google Maps is not configured in this browser. CityMind is keeping the route summary and a secure Google Maps walking link available."
+      );
+      return;
+    }
+
+    const googleMapsApiKey = apiKey;
+
+    setMapMessage(
+      hasDeviceLocation
+        ? "Preparing the interactive Google Maps route near your shared location."
+        : "Preparing the interactive Google Maps route from the labelled reference location."
+    );
 
     const showFallback = (message: string) => {
       if (disposed) {
         return;
       }
 
+      timedOut = true;
       if (startupTimer) {
         window.clearTimeout(startupTimer);
       }
-      markersRef.current.forEach((marker) => marker.remove());
-      markersRef.current = [];
-      activeMap?.remove();
-      activeMap = null;
+      clearMapVisuals(markersRef, polylineRef);
       mapRef.current = null;
-      mapboxRef.current = null;
+      mapsLibraryRef.current = null;
       setMapState("unavailable");
       setMapMessage(message);
     };
 
     async function createMap() {
       try {
-        const mapboxgl = (await import("mapbox-gl")).default;
-
-        if (!mapboxgl.supported()) {
-          showFallback(
-            "This browser cannot render Mapbox. CityMind is showing the accessible route summary instead."
-          );
-          return;
-        }
-
-        if (disposed || !mapContainerRef.current) {
-          return;
-        }
-
-        mapboxgl.accessToken = accessToken;
-        mapboxRef.current = mapboxgl;
-        activeMap = new mapboxgl.Map({
-          container: mapContainerRef.current,
-          style: "mapbox://styles/mapbox/standard",
-          center: [location.longitude, location.latitude],
-          zoom: 14,
-          attributionControl: true
-        });
-        activeMap.addControl(new mapboxgl.NavigationControl(), "bottom-right");
-
         startupTimer = window.setTimeout(() => {
           showFallback(
-            "Mapbox did not finish loading. CityMind is keeping the route instructions available below."
+            "Google Maps did not finish loading. CityMind is keeping the route instructions and a walking link available."
           );
         }, MAP_STARTUP_TIMEOUT_MS);
 
-        activeMap.on("load", () => {
-          if (disposed) {
-            return;
-          }
+        const libraries = await loadGoogleMapsLibraries(googleMapsApiKey);
 
-          if (startupTimer) {
-            window.clearTimeout(startupTimer);
-          }
-          mapRef.current = activeMap;
-          setMapState("ready");
-          setMapMessage(
-            hasDeviceLocation
-              ? "Interactive Mapbox route view is ready."
-              : "Interactive reference-map view is ready. Routes without device location begin at a labelled reference location."
+        if (!mapContainerRef.current) {
+          await waitForNextFrame();
+        }
+
+        if (disposed || timedOut) {
+          return;
+        }
+
+        if (!mapContainerRef.current) {
+          showFallback(
+            "CityMind could not mount the Google Maps canvas. Route instructions and a walking link remain available below."
           );
+          return;
+        }
+
+        const { Map } = libraries.maps;
+        activeMap = new Map(mapContainerRef.current, {
+          center: {
+            lat: locationLatitude,
+            lng: locationLongitude
+          },
+          zoom: 14,
+          mapId: mapId || undefined,
+          clickableIcons: true,
+          fullscreenControl: true,
+          keyboardShortcuts: true,
+          mapTypeControl: true,
+          rotateControl: true,
+          scaleControl: true,
+          streetViewControl: true,
+          zoomControl: true,
+          gestureHandling: "cooperative"
         });
 
-        activeMap.on("error", (event) => {
-          const detail = event.error?.message?.toLowerCase() ?? "";
+        if (startupTimer) {
+          window.clearTimeout(startupTimer);
+        }
 
-          if (
-            !activeMap?.loaded() ||
-            detail.includes("token") ||
-            detail.includes("unauthorized") ||
-            detail.includes("forbidden")
-          ) {
-            showFallback(
-              "Mapbox could not load this map. CityMind is keeping the route instructions available below."
-            );
-          }
-        });
+        mapRef.current = activeMap;
+        mapsLibraryRef.current = libraries;
+        setMapState("ready");
+        setMapMessage(
+          hasDeviceLocation
+            ? "Interactive Google Maps walking route is ready."
+            : "Interactive Google Maps route is ready. Routes without device location begin at a labelled reference location."
+        );
       } catch {
         showFallback(
-          "CityMind could not start the interactive map. Route instructions remain available below."
+          "CityMind could not start Google Maps. Route instructions and a walking link remain available below."
         );
       }
     }
@@ -152,113 +170,85 @@ export function InteractiveMap({
       if (startupTimer) {
         window.clearTimeout(startupTimer);
       }
-      markersRef.current.forEach((marker) => marker.remove());
-      markersRef.current = [];
-      activeMap?.remove();
+      clearMapVisuals(markersRef, polylineRef);
+      if (activeMap) {
+        google.maps.event.clearInstanceListeners(activeMap);
+      }
       mapRef.current = null;
-      mapboxRef.current = null;
+      mapsLibraryRef.current = null;
     };
-  }, [hasDeviceLocation, location.latitude, location.longitude]);
+  }, [apiKey, hasDeviceLocation, hasRoute, locationLatitude, locationLongitude, mapId]);
 
   useEffect(() => {
     const map = mapRef.current;
-    const mapboxgl = mapboxRef.current;
+    const libraries = mapsLibraryRef.current;
 
-    if (!map || !mapboxgl || mapState !== "ready") {
+    if (!map || !libraries || mapState !== "ready" || !route) {
       return;
     }
 
-    markersRef.current.forEach((marker) => marker.remove());
-    markersRef.current = [];
+    clearMapVisuals(markersRef, polylineRef);
 
-    const origin = route?.origin.coordinates ?? location;
+    const origin = route.origin.coordinates;
+    const routePath = getRoutePath(route);
     const originLabel =
-      route?.origin.label ?? (hasDeviceLocation ? "Current location" : "Reference map center");
-    markersRef.current.push(createMarker(mapboxgl, originLabel, "bg-blue-600", origin).addTo(map));
+      route.origin.label ?? (hasDeviceLocation ? "Current location" : "Reference map center");
 
-    if (!route) {
-      removeRouteLayer(map);
-      map.easeTo({
-        center: [location.longitude, location.latitude],
-        zoom: 14,
-        essential: true
-      });
-      return;
-    }
+    markersRef.current = [
+      createRouteMarker({
+        map,
+        markerLibrary: libraries.marker,
+        useAdvancedMarkers: Boolean(mapId),
+        label: originLabel,
+        color: "#2563eb",
+        coordinates: origin
+      }),
+      createRouteMarker({
+        map,
+        markerLibrary: libraries.marker,
+        useAdvancedMarkers: Boolean(mapId),
+        label: route.destination.label,
+        color: "#10b981",
+        coordinates: route.destination.coordinates
+      })
+    ];
 
-    markersRef.current.push(
-      createMarker(
-        mapboxgl,
-        route.destination.label,
-        "bg-emerald-500",
-        route.destination.coordinates
-      ).addTo(map)
-    );
-
-    const routeData = {
-      type: "Feature" as const,
-      properties: {},
-      geometry: route.geometryGeoJson
-    };
-    const source = map.getSource(ROUTE_SOURCE_ID) as GeoJSONSource | undefined;
     const routeColor = route.status === "routed" ? "#2563eb" : "#d97706";
-
-    if (source) {
-      source.setData(routeData);
-      if (map.getLayer(ROUTE_LAYER_ID)) {
-        map.setPaintProperty(ROUTE_LAYER_ID, "line-color", routeColor);
-      }
-    } else {
-      map.addSource(ROUTE_SOURCE_ID, {
-        type: "geojson",
-        data: routeData
-      });
-      map.addLayer({
-        id: ROUTE_LAYER_ID,
-        type: "line",
-        source: ROUTE_SOURCE_ID,
-        layout: {
-          "line-cap": "round",
-          "line-join": "round"
-        },
-        paint: {
-          "line-color": routeColor,
-          "line-width": 5,
-          "line-opacity": 0.88
-        }
-      });
-    }
-
-    const bounds = new mapboxgl.LngLatBounds();
-    route.geometryGeoJson.coordinates.forEach((coordinate) => bounds.extend(coordinate));
-    map.fitBounds(bounds, {
-      padding: 48,
-      maxZoom: 15,
-      duration: 550,
-      essential: true
+    polylineRef.current = new libraries.maps.Polyline({
+      map,
+      path: routePath,
+      clickable: false,
+      geodesic: true,
+      strokeColor: routeColor,
+      strokeOpacity: route.status === "routed" ? 0.92 : 0.78,
+      strokeWeight: 6,
+      zIndex: 2
     });
-  }, [hasDeviceLocation, location, mapState, route]);
+
+    fitRouteBounds(map, routePath);
+  }, [hasDeviceLocation, mapId, mapState, route]);
 
   const recenterMap = () => {
     const map = mapRef.current;
-    const origin = route?.origin.coordinates ?? location;
 
     if (!map) {
       return;
     }
 
-    map.flyTo({
-      center: [origin.longitude, origin.latitude],
-      zoom: route ? 15 : 14,
-      essential: true
-    });
+    if (route) {
+      fitRouteBounds(map, getRoutePath(route));
+      return;
+    }
+
+    map.panTo(toLatLngLiteral(location));
+    map.setZoom(14);
   };
 
   const routeStatus = route
     ? route.status === "routed"
-      ? route.source === "mapbox"
-        ? "Live Mapbox route"
-        : "Live walking route"
+      ? route.source === "osrm"
+        ? "Live OSRM route"
+        : "Live Google route"
       : "Estimated route"
     : "Waiting for route";
   const accessibilityLabel = route?.accessibility.verified
@@ -277,7 +267,8 @@ export function InteractiveMap({
               Route map
             </CardTitle>
             <p className="mt-1 text-sm text-muted-foreground">
-              Walking-route context with text instructions as a fallback.
+              Interactive walking-route context with readable instructions and a Google Maps
+              fallback.
             </p>
           </div>
           <Badge variant={route?.status === "routed" ? "success" : "warning"}>{routeStatus}</Badge>
@@ -292,11 +283,15 @@ export function InteractiveMap({
               ref={mapContainerRef}
               className="h-[340px] overflow-hidden rounded-[22px] border bg-secondary md:h-[400px]"
               role="region"
-              aria-label="Interactive Mapbox route map"
+              aria-label="Interactive Google Maps walking route map"
               aria-busy={mapState === "loading"}
             />
             {mapState === "loading" ? (
-              <div className="absolute inset-0 flex items-center justify-center rounded-[22px] border bg-background/75 p-6 text-center text-sm font-medium backdrop-blur-sm">
+              <div
+                className="absolute inset-0 flex items-center justify-center rounded-[22px] border bg-background/75 p-6 text-center text-sm font-medium backdrop-blur-sm"
+                role="status"
+                aria-live="polite"
+              >
                 Preparing the route map...
               </div>
             ) : null}
@@ -306,6 +301,7 @@ export function InteractiveMap({
               size="sm"
               className="absolute left-3 top-3"
               onClick={recenterMap}
+              disabled={mapState !== "ready"}
               aria-label={`Recenter map on ${recenterLabel}`}
             >
               <LocateFixed aria-hidden />
@@ -314,7 +310,7 @@ export function InteractiveMap({
           </div>
         )}
 
-        <p className="text-xs leading-5 text-muted-foreground" role="status">
+        <p className="text-xs leading-5 text-muted-foreground" role="status" aria-live="polite">
           {mapMessage}
         </p>
 
@@ -349,30 +345,151 @@ export function InteractiveMap({
   );
 }
 
-function createMarker(
-  mapboxgl: MapboxModule,
-  label: string,
-  colorClass: string,
-  coordinates: Coordinates
-) {
-  const element = document.createElement("span");
-  element.className = `block size-4 rounded-full border-2 border-white ${colorClass} shadow`;
-  element.setAttribute("role", "img");
-  element.setAttribute("aria-label", label);
+async function loadGoogleMapsLibraries(apiKey: string): Promise<GoogleMapsLibraries> {
+  if (!googleMapsLibrariesPromise) {
+    const loadingPromise = (async () => {
+      const { Loader } = await import("@googlemaps/js-api-loader");
+      const loader = new Loader({
+        apiKey,
+        version: "weekly",
+        libraries: ["marker"]
+      });
+      const [maps, marker] = await Promise.all([
+        loader.importLibrary("maps"),
+        loader.importLibrary("marker")
+      ]);
 
-  return new mapboxgl.Marker({ element })
-    .setLngLat([coordinates.longitude, coordinates.latitude])
-    .setPopup(new mapboxgl.Popup({ offset: 20 }).setText(label));
+      return { maps, marker };
+    })();
+
+    googleMapsLibrariesPromise = loadingPromise;
+    void loadingPromise.catch(() => {
+      if (googleMapsLibrariesPromise === loadingPromise) {
+        googleMapsLibrariesPromise = undefined;
+      }
+    });
+  }
+
+  return googleMapsLibrariesPromise;
 }
 
-function removeRouteLayer(map: MapboxMap) {
-  if (map.getLayer(ROUTE_LAYER_ID)) {
-    map.removeLayer(ROUTE_LAYER_ID);
+function createRouteMarker({
+  map,
+  markerLibrary,
+  useAdvancedMarkers,
+  label,
+  color,
+  coordinates
+}: {
+  map: google.maps.Map;
+  markerLibrary: google.maps.MarkerLibrary;
+  useAdvancedMarkers: boolean;
+  label: string;
+  color: string;
+  coordinates: Coordinates;
+}): MapMarker {
+  const position = toLatLngLiteral(coordinates);
+
+  if (useAdvancedMarkers) {
+    const pin = new markerLibrary.PinElement({
+      background: color,
+      borderColor: "#ffffff",
+      glyphColor: "#ffffff",
+      scale: 1.08
+    });
+    const marker = new markerLibrary.AdvancedMarkerElement({
+      map,
+      position,
+      title: label,
+      content: pin.element
+    });
+
+    return {
+      remove: () => {
+        marker.map = null;
+      }
+    };
   }
 
-  if (map.getSource(ROUTE_SOURCE_ID)) {
-    map.removeSource(ROUTE_SOURCE_ID);
+  const marker = new markerLibrary.Marker({
+    map,
+    position,
+    title: label,
+    icon: {
+      path: google.maps.SymbolPath.CIRCLE,
+      fillColor: color,
+      fillOpacity: 1,
+      scale: 8,
+      strokeColor: "#ffffff",
+      strokeOpacity: 1,
+      strokeWeight: 2
+    }
+  });
+
+  return {
+    remove: () => {
+      marker.setMap(null);
+    }
+  };
+}
+
+function clearMapVisuals(
+  markersRef: React.MutableRefObject<MapMarker[]>,
+  polylineRef: React.MutableRefObject<google.maps.Polyline | null>
+) {
+  markersRef.current.forEach((marker) => marker.remove());
+  markersRef.current = [];
+  polylineRef.current?.setMap(null);
+  polylineRef.current = null;
+}
+
+function getRoutePath(route: RouteSummary): google.maps.LatLngLiteral[] {
+  const geometry = route.geometry.map(toLatLngLiteral);
+
+  if (geometry.length > 1) {
+    return geometry;
   }
+
+  return [
+    toLatLngLiteral(route.origin.coordinates),
+    toLatLngLiteral(route.destination.coordinates)
+  ];
+}
+
+function fitRouteBounds(map: google.maps.Map, routePath: google.maps.LatLngLiteral[]) {
+  const bounds = new google.maps.LatLngBounds();
+  routePath.forEach((coordinate) => bounds.extend(coordinate));
+
+  if (routePath.length > 1) {
+    map.fitBounds(bounds, 48);
+    return;
+  }
+
+  map.panTo(routePath[0]);
+  map.setZoom(15);
+}
+
+function toLatLngLiteral(coordinates: Coordinates): google.maps.LatLngLiteral {
+  return { lat: coordinates.latitude, lng: coordinates.longitude };
+}
+
+function getGoogleMapsDirectionsUrl(route: RouteSummary) {
+  const query = new URLSearchParams({
+    api: "1",
+    origin: formatCoordinates(route.origin.coordinates),
+    destination: formatCoordinates(route.destination.coordinates),
+    travelmode: "walking"
+  });
+
+  return `https://www.google.com/maps/dir/?${query.toString()}`;
+}
+
+function formatCoordinates({ latitude, longitude }: Coordinates) {
+  return `${latitude},${longitude}`;
+}
+
+function waitForNextFrame() {
+  return new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()));
 }
 
 function MapFallback({ route, message }: { route?: RouteSummary | null; message: string }) {
@@ -408,6 +525,19 @@ function MapFallback({ route, message }: { route?: RouteSummary | null; message:
           {route ? "Route summary available" : "Waiting for guidance"}
         </div>
         <p className="mt-1 text-muted-foreground">{message}</p>
+        {route ? (
+          <Button asChild size="sm" className="mt-3 w-full">
+            <a
+              href={getGoogleMapsDirectionsUrl(route)}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={`Open a walking route from ${route.origin.label} to ${route.destination.label} in Google Maps`}
+            >
+              <ExternalLink aria-hidden />
+              Open walking route
+            </a>
+          </Button>
+        ) : null}
       </div>
     </div>
   );
